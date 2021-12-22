@@ -2,7 +2,6 @@
 
 #include "Arduino.h"
 
-
 //
 
 dynamixelDevice::dynamixelDevice(HardwareSerial &serial)
@@ -21,8 +20,10 @@ dynamixelDevice::dynamixelDevice(HardwareSerial &serial)
 
   // EEPROM CRC IS CORRECT?
   // If not could be because first init or memory issue
+
   if (!checkDataDynCRC())
   {
+
     // Erase RAM memory
     initMem();
     // Load default parameters
@@ -30,16 +31,14 @@ dynamixelDevice::dynamixelDevice(HardwareSerial &serial)
     // Store into EEPROM
     data2EEPROM();
     // Compute and store EEPROM CRC
+
     storeDataDynCRC();
-
-    com_port->println("EEPROM REINIT");
+    current_error = 1;
   }
-
   /*
-  load_default();
-  data2EEPROM();
+    load_default();
+    data2EEPROM();
   */
-
   // INIT PACKET COM INFO
   packetAvailable = false;
   cindex = 0;
@@ -460,7 +459,7 @@ void dynamixelDevice::load_default()
 uint8_t dynamixelDevice::loadEEPROM()
 {
   eeprom_buffer_fill();
-  for (uint16_t i = 0; i < EEPROM_ADDRESSES; i++)
+  for (uint16_t i = 0; i < DYN_DATA_SIZE; i++)
   {
     if (i + EEPROM_FIRST_ADDRESS > EEPROM_LENGTH)
       return 0x07;
@@ -478,11 +477,13 @@ uint8_t dynamixelDevice::writeEEPROM(uint16_t address, uint8_t value)
   EEPROM[address + EEPROM_FIRST_ADDRESS] = value;
   /*eeprom[_buffered_write_byte(address + EEPROM_FIRST_ADDRESS, value);
     eeprom_buffer_flush();*/
+  // Compute CRC
+  storeDataDynCRC();
   return 0;
 }
 void dynamixelDevice::data2EEPROM()
 {
-  for (uint16_t i = 0; i < EEPROM_ADDRESSES; i++)
+  for (uint16_t i = 0; i < DYN_DATA_SIZE; i++)
   {
     // EEPROM.update(i + EEPROM_FIRST_ADDRESS, *(data + i));
     eeprom_buffered_write_byte(i + EEPROM_FIRST_ADDRESS, *(data + i));
@@ -491,23 +492,27 @@ void dynamixelDevice::data2EEPROM()
   // EEPROM.update(0, 0x01);
   eeprom_buffered_write_byte(0, 0x01);
   eeprom_buffer_flush();
+  // Compute CRC
+  storeDataDynCRC();
 }
 
 void dynamixelDevice::storeDataDynCRC()
 {
-  unsigned short crc = packet_crc(0, dyn_data, EEPROM_ADDRESSES-1);
+
+  unsigned short crc = packet_crc(0, dyn_data, EEPROM_ADDRESSES - 1);
 
   // WRITE CRC
-  EEPROM[0] = crc & 0xFF;
-  EEPROM[1] = crc >> 8;
+  EEPROM[EEPROM_CRCL] = crc & 0xFF;
+  EEPROM[EEPROM_CRCH] = crc >> 8;
 }
 bool dynamixelDevice::checkDataDynCRC()
 {
+  eeprom_buffer_fill();
   // GET CRC
-  unsigned short crc = packet_crc(0, dyn_data, EEPROM_ADDRESSES-1); // CRC WITHOUT CRC VALUE IN EEPROM (beginning after EEPROM_FIRST_ADDRESS )
-  char crcl = eeprom_buffered_read_byte(0);
-  char crch = eeprom_buffered_read_byte(1);
-  unsigned short crc_in_eeprom = crcl+ crch<<8;
+  unsigned short crc = packet_crc(0, dyn_data, EEPROM_ADDRESSES - 1); // CRC WITHOUT CRC VALUE IN EEPROM (beginning after EEPROM_FIRST_ADDRESS )
+  char crcl = eeprom_buffered_read_byte(EEPROM_CRCL);
+  char crch = eeprom_buffered_read_byte(EEPROM_CRCH);
+  unsigned short crc_in_eeprom = crcl + (crch << 8);
   // EEPROM GOT THE RIGHT CRC ??
   if (crc == crc_in_eeprom)
     return true;
