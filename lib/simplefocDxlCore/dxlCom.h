@@ -45,9 +45,16 @@ public:
   HardwareSerial *com_port = nullptr;
   dxlMemory *dxlmem = nullptr;
 
-  // Packet management
+  // Input packet management
   bool packetAvailable = false; // if packet is available
+  uint8_t instruction;
   unsigned int packet_len; // packet lenght
+  unsigned short packetcrc;
+
+  // Output packet management
+  void makeNewPacket();
+  void updatepacketParameter();
+  void endpacket();
 
   // IN/OUT BUFFERS
   unsigned char inBuffer[INBUFSIZE];
@@ -57,21 +64,13 @@ public:
   unsigned char param[PARAMSIZE];
   uint16_t iparam; // current size dxl parameter index
 
+  // Device Identifier
+  unsigned int id;
+  void setId(unsigned int _id);
   // ERRORS
   uint8_t current_error; // current error code
   // DATA
   /*
-
-
-  bool parameter_available();
-
-
-
-  unsigned short packetcrc;
-
-  uint8_t instruction;
-  bool newparameter;
-
 
   */
 
@@ -83,6 +82,26 @@ public:
   int execute_command();
   int update();
   void SERevent();
+};
+
+/*
+class statusPacket
+     You MUST respect the following protocol: constructor + addID + addError (optionnal) + endpacket
+     */
+class statusPacket
+{
+public:
+  statusPacket(unsigned char *_buffer, unsigned char _id = 0);
+
+  void addId(unsigned char id);
+  void addError(unsigned char error);
+
+  void endPacket();
+
+  //  Vars
+  unsigned char *buffer;
+  uint16_t parameter_size;
+  uint16_t size;
 };
 
 #endif
