@@ -6,6 +6,8 @@ dxlCom::dxlCom(HardwareSerial &serial, dxlMemory *_dxlmem)
 {
   com_port = &serial;
   dxlmem = _dxlmem;
+
+  inPacket.setbuffer(inBuffer);
 }
 /*
 bool dxlCom::parameter_available()
@@ -51,7 +53,13 @@ int dxlCom::update()
 void dxlCom::setId(unsigned int _id)
 {
   id = _id;
+  inPacket.setId(id);
 }
+/* function storeByteInPacket
+      @param byte b : a byte to check
+      Check and if correct store byte
+*/
+
 // Get incomming packet
 void dxlCom::SERevent()
 {
@@ -60,99 +68,9 @@ void dxlCom::SERevent()
 #endif
   while (com_port->available())
   {
-
     // get the new byte:
     char inChar = (char)com_port->read();
-
-    inBuffer[cindex] = inChar;
-
-    // com_port->print((char)cindex);
-    bool abortPacket = false;
-    switch (cindex)
-    {
-    case 0:
-      if (inChar != P_HEADER_1)
-      {
-        abortPacket = true;
-      }
-
-      break;
-    case 1:
-      if (inChar != P_HEADER_2)
-        abortPacket = true;
-
-      break;
-    case 2:
-      if (inChar != P_HEADER_3)
-        abortPacket = true;
-
-      break;
-    case 3:
-      if (inChar != P_RESERVED)
-        abortPacket = true;
-      break;
-    case 4:
-      if (inChar != id)
-        abortPacket = true;
-      /* com_port->print((char)0xAA);
-        com_port->print((char)inChar);
-        com_port->print((char)getMemValue(ADD_ID));
-        com_port->print((char)0xAA);*/
-      break;
-    case 5:
-      packet_len = inChar;
-      break;
-    case 6:
-      packet_len = packet_len + (unsigned int)(inChar << 8);
-      break;
-    case 7: // INSTRUCTION
-      instruction = inChar;
-      break;
-    default:
-      break;
-    }
-    if (cindex > 7)
-    {
-      //[HEADERS ID
-      if (cindex - 7 < packet_len - 2)
-      { // this is a parameter
-        param[iparam] = inChar;
-        iparam++;
-      }
-      else
-      { // we should be in CRC here
-        if (cindex - 8 - (packet_len - 3) == 0)
-        {
-          packetcrc = inChar;
-        }
-        else if (cindex - 8 - (packet_len - 3) == 1)
-        {
-          packetcrc += inChar << 8;
-
-          unsigned short crc = crc_conversion(0, inBuffer, cindex - 1);
-
-          if (crc == packetcrc)
-          {
-            packetAvailable = true;
-          }
-          else
-            abortPacket = true;
-        }
-      }
-    }
-    if (abortPacket)
-    {             // IGNORE PACKET
-      cindex = 0; // restart
-      iparam = 0;
-      packet_len = 0;
-      instruction = 0;
-    }
-    else
-    {
-      cindex++;
-      if (cindex > INBUFSIZE)
-        cindex = 0;
-    }
+    uint8_t current_error = inPacket.storeByte(inChar);
   }
 }
 
@@ -179,19 +97,19 @@ statusPacket::statusPacket(unsigned char *_buffer, unsigned char _id = 0)
   parameter_size = size; // get current size in order to check the difference afterward
 }
 /*
-function addError
+function setError
      @param unsigned char error : Dynamixel packet error flag
 */
-void statusPacket::addError(unsigned char error)
+void statusPacket::setError(unsigned char error)
 {
   buffer[8] = error; // Error
 }
 
 /*
-function addId
+function setId
      @param unsigned char id  : Dynamixel id
 */
-void statusPacket::addId(unsigned char id)
+void statusPacket::setId(unsigned char id)
 {
   buffer[4] = id;
 }
@@ -214,4 +132,110 @@ void statusPacket::endPacket()
   size++;
   buffer[size] = crc >> 8;
   size++;
+}
+/* Class constructor
+ */
+incomingPacket::incomingPacket(unsigned char *_buffer, unsigned char _id = 0)
+{
+  buffer = _buffer;
+  id = _id;
+  header[4] = id;
+  packetAvailable = false;
+}
+
+/*
+function incomingPacket
+@param byte b : byte inserted
+@return error : {0 : no error; 1 : wrong header, 2 : wrong CRC}
+*/
+uint8_t incomingPacket::storeByte(byte b)
+{
+  // store in buffer
+  buffer[size] = b;
+
+  // check
+  if (size < 5) // still in header
+  {
+    if (b == header[size])
+    {
+      size++;
+      return 0; // ok
+    }
+    else
+    {
+      size = 0; // reinit size
+      return 1; // wrong header
+    }
+  }
+  else if (size == 5) // packet lenght L
+  {
+    packet_lenght = b;
+  }
+  else if (size == 6) // packet lenght H
+  {
+    packet_lenght += (unsigned int)(b << 8);
+  }
+  else if (size == 7) // Instruction
+  {
+    instruction = b;
+  }
+  else
+  {
+    //[HEADERS ID
+    if (size - 7 < packet_lenght - 2)
+    { // this is a parameter
+      param[iparam] = b;
+      iparam++;
+    }
+    else
+    { // we should be in CRC here
+      if (size - 5 - packet_lenght == 0)
+      {
+        packetcrc = b;
+      }
+      else if (size - 8 - (packet_lenght - 3) == 1)
+      {
+        packetcrc += b << 8;
+
+        unsigned short crc = crc_conversion(0, buffer, size - 1);
+
+        if (crc == packetcrc)
+        {
+          packetAvailable = true;
+        }
+        else // CRC ISSUE
+        {
+          size = 0;
+          return 2;
+        }
+      }
+    }
+  }
+  size++;
+
+  return 0;
+}
+
+/*
+function available
+@return availability : {false : not available , true : available}
+Also clear packetAvailable flag
+*/
+bool incomingPacket::available()
+{
+  if (available)
+  {
+    packetAvailable = false;
+    return true;
+  }
+  return false;
+}
+
+void incomingPacket::setbuffer(unsigned char *_buffer)
+{
+  buffer = _buffer;
+}
+void incomingPacket::setId(unsigned char _id)
+{
+  id = _id;
 }

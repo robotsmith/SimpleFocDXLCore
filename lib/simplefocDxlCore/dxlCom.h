@@ -33,7 +33,6 @@
 #define P_HEADER_2 0xFF
 #define P_HEADER_3 0xFD
 #define P_RESERVED 0x00
-
 class dxlCom
 {
 public:
@@ -64,12 +63,11 @@ public:
   unsigned char param[PARAMSIZE];
   uint16_t iparam; // current size dxl parameter index
 
-  // Device Identifier
-  unsigned int id;
   void setId(unsigned int _id);
   // ERRORS
   uint8_t current_error; // current error code
   // DATA
+  incomingPacket inPacket;
   /*
 
   */
@@ -82,6 +80,10 @@ public:
   int execute_command();
   int update();
   void SERevent();
+
+private:
+  // Device Identifier
+  unsigned int id;
 };
 
 /*
@@ -93,8 +95,8 @@ class statusPacket
 public:
   statusPacket(unsigned char *_buffer, unsigned char _id = 0);
 
-  void addId(unsigned char id);
-  void addError(unsigned char error);
+  void setId(unsigned char id);
+  void setError(unsigned char error);
 
   void endPacket();
 
@@ -104,4 +106,29 @@ public:
   uint16_t size;
 };
 
+class incomingPacket
+{
+
+public:
+  incomingPacket(unsigned char *_buffer, unsigned char _id = 0);
+  incomingPacket()
+  {
+  }
+  void setbuffer(unsigned char *_buffer);
+  void setId(unsigned char _id);
+  uint8_t incomingPacket::storeByte(byte b);
+  //  Vars
+  unsigned char *buffer;
+  uint16_t parameter_size;
+  uint16_t size;
+
+  uint16_t packet_lenght;
+  char header[5] = {P_HEADER_1, P_HEADER_2, P_HEADER_3, P_RESERVED, 0};
+  unsigned short packetcrc;
+  bool packetAvailable;
+  bool available();
+  // Packet structure
+  uint8_t id;
+  uint8_t instruction;
+};
 #endif
