@@ -45,6 +45,14 @@ int dxlCom::update()
 
   return 0;
 }
+/* function setId()
+      @param unsigned int _id : Dynamixel device indentifier (id)
+*/
+void dxlCom::setId(unsigned int _id)
+{
+  id = _id;
+}
+// Get incomming packet
 void dxlCom::SERevent()
 {
 #ifdef HALF_DUPLEX_MODE
@@ -84,7 +92,7 @@ void dxlCom::SERevent()
         abortPacket = true;
       break;
     case 4:
-      if (inChar != getMemValue(ADD_ID))
+      if (inChar != id)
         abortPacket = true;
       /* com_port->print((char)0xAA);
         com_port->print((char)inChar);
@@ -149,69 +157,61 @@ void dxlCom::SERevent()
 }
 
 /*
-   ERRORS:
-   -1 : incorrect instruction
+class constructor statusPacket
+     @param unsigned char *buffer  : where is store the memory buffer
 */
-int dxlCom::execute_command()
+statusPacket::statusPacket(unsigned char *_buffer, unsigned char _id = 0)
 {
-
+  // Store buffer
+  buffer = _buffer;
   // HEADER COMPOSITIONS OF ANSWER
-  outBuffer[0] = P_HEADER_1;
-  outBuffer[1] = P_HEADER_2;
-  outBuffer[2] = P_HEADER_3;
-  outBuffer[3] = P_RESERVED;
-  rpsize = 4; // update size
-  // ID
-  memRead(ADD_ID, 1, outBuffer, &rpsize);
+  buffer[0] = P_HEADER_1;
+  buffer[1] = P_HEADER_2;
+  buffer[2] = P_HEADER_3;
+  buffer[3] = P_RESERVED;
+  buffer[4] = _id;
+  // Skip ID
+  //  Skip lenght
 
-  // Skip lenght
+  buffer[7] = 0x55; // Status instruction
 
-  outBuffer[7] = 0x55;          // Status instruction
-  outBuffer[8] = current_error; // Error
-  rpsize = 9;                   // update size
+  size = 9;              // update size
+  parameter_size = size; // get current size in order to check the difference afterward
+}
+/*
+function addError
+     @param unsigned char error : Dynamixel packet error flag
+*/
+void statusPacket::addError(unsigned char error)
+{
+  buffer[8] = error; // Error
+}
 
-  uint16_t parameter_size = rpsize;
-  // Execute instruction
+/*
+function addId
+     @param unsigned char id  : Dynamixel id
+*/
+void statusPacket::addId(unsigned char id)
+{
+  buffer[4] = id;
+}
 
-  if (instruction == INST_PING)
-  {
-    // Read model
-    memRead(ADD_MODEL_NUMBER, 2, outBuffer, &rpsize);
-    // Read firmware version 11th byte
-    memRead(ADD_VERSION_OF_FIRMWARE, 1, outBuffer, &rpsize);
-  }
-  else if (instruction == INST_READ)
-  {
-    // ADDRESS READ
-    uint16_t address = *(param) + (*(param + 1) << 8);
-    uint16_t readsize = *(param + 2) + (*(param + 3) << 8);
-    // FILL READ DATA
-    memRead(address, readsize, outBuffer, &rpsize);
-  }
-  else if (instruction == INST_WRITE)
-  {
-    newparameter = true;
-    uint16_t wAddress = *(param) + (*(param + 1) << 8);
-    // Remove address 2 bytes from size and select the right parameters (+2 bytes)
-    memWrite(wAddress, iparam - 2, (param + 2));
-  }
-  else
-  {
-    // ERROR : UNKNOWN INSTRUCTION
-    outBuffer[8] = 0x02;
-  }
-  parameter_size = rpsize - parameter_size;
+/*
+function endPacket
+
+*/
+void statusPacket::endPacket()
+{
+  // Get the parameter size
+  parameter_size = size - parameter_size;
   // SIZE
-  outBuffer[5] = (parameter_size + 4) & 0xff;
-  outBuffer[6] = (parameter_size + 4) >> 8;
+  buffer[5] = (parameter_size + 4) & 0xff;
+  buffer[6] = (parameter_size + 4) >> 8;
 
   // CRC
-  unsigned short crc = crc_conversion(0, outBuffer, rpsize);
-  outBuffer[rpsize] = crc & 0xFF;
-  rpsize++;
-  outBuffer[rpsize] = crc >> 8;
-  rpsize++;
-  // END PACKET
-
-  return 0;
+  unsigned short crc = crc_conversion(0, buffer, size);
+  buffer[size] = crc & 0xFF;
+  size++;
+  buffer[size] = crc >> 8;
+  size++;
 }

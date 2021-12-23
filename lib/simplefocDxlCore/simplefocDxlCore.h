@@ -20,6 +20,11 @@ private:
     // Variables
     BLDCMotor *motor;
     dxlCom *com;
+
+    /*
+        bool newparameter;
+      bool parameter_available();
+      */
 };
 
 #endif

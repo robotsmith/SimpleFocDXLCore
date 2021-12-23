@@ -140,3 +140,57 @@ void simplefocDxlCore::update_parameters()
     // ADD_PRESENT_INPUT_VOLTAGE
     // ADD_PRESENT_TEMPERATURE
 }
+
+/*
+   ERRORS:
+   -1 : incorrect instruction
+*/
+int dxlCom::execute_command()
+{
+
+    // Make a new packet
+    statusPacket *stspacket = new statusPacket(outbuffer, getValueFromDxlData(ADD_ID));
+
+    // TYPES OF ANSWER
+    if (instruction == INST_PING)
+    {
+        // Read model
+        memRead(ADD_MODEL_NUMBER, 2, stspacket->buffer, stspacket->size);
+        // Read firmware version 11th byte
+        memRead(ADD_VERSION_OF_FIRMWARE, 1, stspacket->buffer, stspacket->size);
+    }
+    else if (instruction == INST_READ)
+    {
+        // ADDRESS READ
+        uint16_t address = *(param) + (*(param + 1) << 8);
+        uint16_t readsize = *(param + 2) + (*(param + 3) << 8);
+        // FILL READ DATA
+        memRead(address, readsize, outBuffer, &rpsize);
+    }
+    else if (instruction == INST_WRITE)
+    {
+        newparameter = true;
+        uint16_t wAddress = *(param) + (*(param + 1) << 8);
+        // Remove address 2 bytes from size and select the right parameters (+2 bytes)
+        memWrite(wAddress, iparam - 2, (param + 2));
+    }
+    else
+    {
+        // ERROR : UNKNOWN INSTRUCTION
+        outBuffer[8] = 0x02;
+    }
+    parameter_size = rpsize - parameter_size;
+    // SIZE
+    outBuffer[5] = (parameter_size + 4) & 0xff;
+    outBuffer[6] = (parameter_size + 4) >> 8;
+
+    // CRC
+    unsigned short crc = crc_conversion(0, outBuffer, rpsize);
+    outBuffer[rpsize] = crc & 0xFF;
+    rpsize++;
+    outBuffer[rpsize] = crc >> 8;
+    rpsize++;
+    // END PACKET
+
+    return 0;
+}
