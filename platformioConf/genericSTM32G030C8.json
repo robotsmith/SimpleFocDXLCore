@@ -30,13 +30,9 @@
     "maximum_size": 65536,
     "protocol": "stlink",
     "protocols": [
-      "blackmagic",
-      "dfu",
-      "jlink",
-      "serial",
       "stlink"
     ]
   },
-  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f103t6.html",
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32g030c8.html",
   "vendor": "Generic"
 }
