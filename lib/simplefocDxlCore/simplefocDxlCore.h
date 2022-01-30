@@ -4,6 +4,7 @@
 #include "Arduino.h"
 #include <BLDCMotor.h>
 #include <dxlCom.h>
+#include <dxlMemory.h>
 
 class simplefocDxlCore
 {

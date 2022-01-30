@@ -96,14 +96,14 @@ void simplefocDxlCore::executePacketCommand()
     dxlcom.outPacket.clear();
 
     // Execute instructions
-    if (dxlcom.inPacket.instruction == INST_PING)
+    if (dxlcom.inPacket.instruction() == INST_PING)
     {
         // Add model number to the packet
         dxlmem.memRead(ADD_MODEL_NUMBER, 2, dxlcom.outPacket.buffer, &(dxlcom.outPacket.currentSize), PACKET_BUFFER_SIZE);
         // Add firmware version to the packet
         dxlmem.memRead(ADD_VERSION_OF_FIRMWARE, 2, dxlcom.outPacket.buffer, &(dxlcom.outPacket.currentSize), PACKET_BUFFER_SIZE);
     }
-    else if (dxlcom.inPacket.instruction == INST_READ)
+    else if (dxlcom.inPacket.instruction() == INST_READ)
     {
         // ADDRESS READ
         uint16_t address = *(dxlcom.inPacket.buffer) + (*(dxlcom.inPacket.buffer + 1) << 8);
@@ -111,7 +111,7 @@ void simplefocDxlCore::executePacketCommand()
         // FILL READ DATA
         dxlmem.memRead(address, readsize, dxlcom.outPacket.buffer, &(dxlcom.outPacket.currentSize), PACKET_BUFFER_SIZE);
     }
-    else if (dxlcom.inPacket.instruction == INST_WRITE)
+    else if (dxlcom.inPacket.instruction() == INST_WRITE)
     {
         // A new parameter is available
         pending_parameter = true;

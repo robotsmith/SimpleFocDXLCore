@@ -1,5 +1,6 @@
 #include "dxlMemory.h"
-#include "dxlUtils.h"
+
+dxlMemory::dxlMemory() { clear(); }
 
 bool dxlMemory::load()
 {
@@ -31,7 +32,6 @@ bool dxlMemory::CheckEEPROM_CRC()
   // ELSE
   return true;
 }
-
 
 // EEPROM MANAGEMENT
 bool dxlMemory::loadEEPROM()

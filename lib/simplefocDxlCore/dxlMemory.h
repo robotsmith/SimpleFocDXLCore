@@ -1,7 +1,8 @@
 #ifndef DXLMEMORY_H
 #define DXLMEMORY_H
-#include "Arduino.h"
+#include <Arduino.h>
 #include <EEPROM.h>
+#include <dxlUtils.h>
 
 // EEPROM
 #define EEPROM_ENABLED

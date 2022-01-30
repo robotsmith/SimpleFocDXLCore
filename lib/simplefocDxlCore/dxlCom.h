@@ -3,9 +3,9 @@
 
 // @todo: faire une classe packet
 
-#include "Arduino.h"
-#include "dxlMemory.h"
-#include "dxlUtils.h"
+#include <Arduino.h>
+#include <dxlMemory.h>
+#include <dxlUtils.h>
 
 // COM
 #define HALF_DUPLEX_MODE
@@ -43,8 +43,6 @@ public:
   // Clear packet
   void clear();
 
-  // Packet instruction
-  unsigned char instruction;
   /* Return true if the packet is complete
   @return true if the packet is complete
   */
@@ -94,6 +92,10 @@ public:
   */
   uint8_t getId() { return buffer[4]; }
 
+  /* Get instruction of the packet
+  @return instruction
+  */
+  uint8_t instruction() { return buffer[7]; }
   // size of the buffer
   uint16_t currentSize;
 
@@ -106,7 +108,10 @@ private:
   // Current reading index
   uint16_t idx;
 
-
+  // Expected size
+  uint16_t ExpectedSize;
+  // crc
+  uint16_t crc;
 };
 
 // inline unsigned char param[PARAMSIZE];
@@ -133,7 +138,9 @@ public:
   */
   void setId(unsigned int _id);
 
-  // VARIABLES
+  // *** VARIABLES
+
+  // Hardware Serial stream port
   HardwareSerial *dxlserial = nullptr;
 
   // check serial data

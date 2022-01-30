@@ -125,3 +125,65 @@ bool dxlPacket::isEmpty()
   // Not empty
   return false;
 }
+uint8_t dxlPacket::storeByte(byte b)
+{
+
+  // Add the byte to the buffer
+  buffer[currentSize] = b;
+
+  bool abortPacket = false;
+  if ((currentSize == 0 && (b != P_HEADER_1)) ||
+      (currentSize == 1 && (b != P_HEADER_2)) ||
+      (currentSize == 2 && (b != P_HEADER_3)) ||
+      (currentSize == 3 && (b != P_RESERVED)))
+  {
+    abortPacket = true;
+  }
+  else if (currentSize == 5)
+  {
+    ExpectedSize = b;
+  }
+  else if (currentSize == 6)
+  {
+    ExpectedSize = ExpectedSize + (unsigned int)(b << 8);
+  }
+  else if (currentSize > 7)
+  {
+    //[HEADERS ID
+    if (currentSize - 7 < ExpectedSize - 2)
+    { // this is a parameter
+    }
+    else
+    { // we should be in CRC here
+      if (currentSize - 8 - (ExpectedSize - 3) == 0)
+      {
+        crc = b;
+      }
+      else if (currentSize - 8 - (ExpectedSize - 3) == 1)
+      {
+        crc += b << 8;
+
+        unsigned short crc = crc_conversion(0, buffer, currentSize - 1);
+
+        if (crc == crc)
+        {
+          _complete = true;
+          //Complete informations
+        
+        }
+        else
+          abortPacket = true;
+      }
+    }
+  }
+  if (abortPacket)
+  { // IGNORE PACKET
+    clear();
+  }
+  else
+  {
+    currentSize++;
+    if (currentSize > PACKET_BUFFER_SIZE)
+      clear();
+  }
+}
