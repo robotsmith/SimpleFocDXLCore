@@ -4,8 +4,9 @@
 #include <BLDCMotor.h>
 #include <drivers/BLDCDriver3PWM.h>
 #include <sensors/MagneticSensorI2C.h>
-#include "dynamixel_protocol_V2.h"
-#include "simplefoc2dxl.h"
+#include "simplefocDxlCore.h"
+#include "dxlCom.h"
+#include "dxlMemory.h"
 #if __has_include("hal_conf_extra.h")
 #include "hal_conf_extra.h"
 #endif
@@ -37,9 +38,8 @@ HardwareSerial Serial1(PA9);
 HardwareSerial Serial1(PA10, PA9);
 #endif
 // DYNAMIXEL DEVICE
-dynamixelDevice dyn(Serial1);
 // WRAPPER
-simplefoc_dxl_servo dxlservo(&motor, &dyn);
+simplefocDxlCore mydxl(&motor);
 
 // SETUP
 void setup()
@@ -128,7 +128,6 @@ void setup()
   motor.initFOC();
 
   motor.enabled = false;
-  dxlservo.update_parameters_from_motor();
   // set the inital target value
   // motor.target = 2;
 
@@ -145,5 +144,5 @@ void loop()
   motor.move();
   // tmp = micros() - tmp;
   // Serial1.println(tmp);
-  dxlservo.update();
+  mydxl.update();
 }

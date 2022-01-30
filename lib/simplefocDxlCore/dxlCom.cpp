@@ -2,13 +2,23 @@
 
 //
 
-dxlCom::dxlCom(HardwareSerial &serial, dxlMemory *_dxlmem)
+dxlCom::dxlCom()
 {
-  com_port = &serial;
-  dxlmem = _dxlmem;
-
-  inPacket.setbuffer(inBuffer);
+  // Set packet type
+  inPacket.setType(0);  // Command packet
+  outPacket.setType(1); // Status packet
 }
+
+void dxlCom::attach(HardwareSerial &serial)
+{
+  dxlserial = &serial;
+}
+
+bool dxlCom::packetAvailable()
+{
+  return packetIsAvailable;
+}
+
 /*
 bool dxlCom::parameter_available()
 {
@@ -21,221 +31,97 @@ bool dxlCom::parameter_available()
   return false;
 }
 */
-int dxlCom::update()
+void dxlCom::checkSerial()
+{
+#ifdef HALF_DUPLEX_MODE
+  dxlserial->enableHalfDuplexRx();
+#endif
+  while (dxlserial->available())
+  {
+    // get the new byte:
+    char inChar = (char)dxlserial->read();
+    uint8_t current_error = inPacket.storeByte(inChar);
+  }
+}
+void dxlCom::sendOutPacket()
 {
 
-  if (packetAvailable)
-  {
-    // Init size of response Packet
-    rpsize = 0;
-
-    // RESET BUFFER
-    if (packetAvailable)
-    {
-      execute_command();
-
-      for (uint16_t i = 0; i < rpsize; i++)
-        com_port->print((char)outBuffer[i]);
-
-      // Reinit
-      packetAvailable = false;
-      cindex = 0;
-      iparam = 0;
-      packetcrc = 0;
-    }
-  }
-
-  return 0;
+  while (!outPacket.isEmpty())
+    dxlserial->print((char)outPacket.pop_front());
 }
 /* function setId()
       @param unsigned int _id : Dynamixel device indentifier (id)
 */
 void dxlCom::setId(unsigned int _id)
 {
-  id = _id;
-  inPacket.setId(id);
+  inPacket.setId(_id);
+  outPacket.setId(_id);
 }
-/* function storeByteInPacket
-      @param byte b : a byte to check
-      Check and if correct store byte
-*/
 
-// Get incomming packet
-void dxlCom::SERevent()
+dxlPacket::dxlPacket()
 {
-#ifdef HALF_DUPLEX_MODE
-  com_port->enableHalfDuplexRx();
-#endif
-  while (com_port->available())
+  // Initialize
+  clear();
+}
+
+// Clear packet
+void dxlPacket::clear()
+{
+  // Initialize the exportation index
+  idx = 0;
+  // Initialize the parameter index
+  // Initialize
+  buffer[0] = (P_HEADER_1);
+  buffer[1] = (P_HEADER_2);
+  buffer[2] = (P_HEADER_3);
+  buffer[3] = (P_RESERVED);
+  buffer[4] = 0; // ID
+  // buffer[5] = (0); // length
+  // buffer[6] = (0); // length
+  // buffer[7] = 0 push_back(0);
+
+  if (_type == 1) // Status packet includes an ERROR byte
   {
-    // get the new byte:
-    char inChar = (char)com_port->read();
-    uint8_t current_error = inPacket.storeByte(inChar);
+    currentSize = 9;
   }
+  else // Command packet does not includes an ERROR byte
+    currentSize = 8;
 }
-
-/*
-class constructor statusPacket
-     @param unsigned char *buffer  : where is store the memory buffer
-*/
-statusPacket::statusPacket(unsigned char *_buffer, unsigned char _id = 0)
+bool dxlPacket::pushback(char element)
 {
-  // Store buffer
-  buffer = _buffer;
-  // HEADER COMPOSITIONS OF ANSWER
-  buffer[0] = P_HEADER_1;
-  buffer[1] = P_HEADER_2;
-  buffer[2] = P_HEADER_3;
-  buffer[3] = P_RESERVED;
-  buffer[4] = _id;
-  // Skip ID
-  //  Skip lenght
-
-  buffer[7] = 0x55; // Status instruction
-
-  size = 9;              // update size
-  parameter_size = size; // get current size in order to check the difference afterward
-}
-/*
-function setError
-     @param unsigned char error : Dynamixel packet error flag
-*/
-void statusPacket::setError(unsigned char error)
-{
-  buffer[8] = error; // Error
-}
-
-/*
-function setId
-     @param unsigned char id  : Dynamixel id
-*/
-void statusPacket::setId(unsigned char id)
-{
-  buffer[4] = id;
-}
-
-/*
-function endPacket
-
-*/
-void statusPacket::endPacket()
-{
-  // Get the parameter size
-  parameter_size = size - parameter_size;
-  // SIZE
-  buffer[5] = (parameter_size + 4) & 0xff;
-  buffer[6] = (parameter_size + 4) >> 8;
-
-  // CRC
-  unsigned short crc = crc_conversion(0, buffer, size);
-  buffer[size] = crc & 0xFF;
-  size++;
-  buffer[size] = crc >> 8;
-  size++;
-}
-/* Class constructor
- */
-incomingPacket::incomingPacket(unsigned char *_buffer, unsigned char _id = 0)
-{
-  buffer = _buffer;
-  id = _id;
-  header[4] = id;
-  packetAvailable = false;
-}
-
-/*
-function incomingPacket
-@param byte b : byte inserted
-@return error : {0 : no error; 1 : wrong header, 2 : wrong CRC}
-*/
-uint8_t incomingPacket::storeByte(byte b)
-{
-  // store in buffer
-  buffer[size] = b;
-
-  // check
-  if (size < 5) // still in header
+  if (idx < PACKET_BUFFER_SIZE)
   {
-    if (b == header[size])
-    {
-      size++;
-      return 0; // ok
-    }
-    else
-    {
-      size = 0; // reinit size
-      return 1; // wrong header
-    }
+    buffer[idx] = element;
+    idx++;
+    return false;
   }
-  else if (size == 5) // packet lenght L
+
+  // Issue
+  return true;
+}
+/* Pop back info
+@return the first element of the packet
+*/
+char dxlPacket::pop_front()
+{
+  if (idx < PACKET_BUFFER_SIZE)
   {
-    packet_lenght = b;
-  }
-  else if (size == 6) // packet lenght H
-  {
-    packet_lenght += (unsigned int)(b << 8);
-  }
-  else if (size == 7) // Instruction
-  {
-    instruction = b;
+    // Increment le reading buffer
+    idx++;
   }
   else
-  {
-    //[HEADERS ID
-    if (size - 7 < packet_lenght - 2)
-    { // this is a parameter
-      param[iparam] = b;
-      iparam++;
-    }
-    else
-    { // we should be in CRC here
-      if (size - 5 - packet_lenght == 0)
-      {
-        packetcrc = b;
-      }
-      else if (size - 8 - (packet_lenght - 3) == 1)
-      {
-        packetcrc += b << 8;
+    return 0xFF;
 
-        unsigned short crc = crc_conversion(0, buffer, size - 1);
-
-        if (crc == packetcrc)
-        {
-          packetAvailable = true;
-        }
-        else // CRC ISSUE
-        {
-          size = 0;
-          return 2;
-        }
-      }
-    }
-  }
-  size++;
-
-  return 0;
+  return buffer[idx];
 }
-
-/*
-function available
-@return availability : {false : not available , true : available}
-Also clear packetAvailable flag
+/* Check if the packet is empty or not
+@return true if the packet is empty
 */
-bool incomingPacket::available()
+bool dxlPacket::isEmpty()
 {
-  if (available)
-  {
-    packetAvailable = false;
+  // If the reading buffer is > to the buffer size then the packet is empty
+  if (idx > currentSize)
     return true;
-  }
+  // Not empty
   return false;
-}
-
-void incomingPacket::setbuffer(unsigned char *_buffer)
-{
-  buffer = _buffer;
-}
-void incomingPacket::setId(unsigned char _id)
-{
-  id = _id;
 }

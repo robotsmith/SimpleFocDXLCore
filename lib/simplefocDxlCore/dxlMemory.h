@@ -81,30 +81,46 @@
 */
 //#define ADD_INDIRECT_ADDR_29 578
 
+/*
+Change the ram and flash of the Dynamixel device
+*/
 class dxlMemory
 {
 public:
     // *** Functions
+    // Contructor of dxl memory
     dxlMemory();
 
-    void load_default();
-    void clearDxlData();
+    /* Load parameters from EEPROM or default
+    @return 1 if memory is not correct (CRC not correct)
+    */
+    bool load();
+    /* Check EEPROM integrity with CRC method
+    @return true if there is an error on CRC read
+    */
+    bool CheckEEPROM_CRC();
+    /* Load EEPROMto memory
+    @return true if there is an error on loading
+    */
+    bool loadEEPROM();
+
+    // Clear Memory
+    void clear();
 
     uint8_t getValueFromDxlData(uint16_t address);
     uint32_t getValueFromDxlData(uint16_t address, uint8_t len);
-    void setDxlData(uint16_t address, uint8_t value);
-    void setDxlData(uint16_t address, int value);
-    void setDxlData(uint16_t address, uint16_t value);
-    void setDxlData(uint16_t address, uint32_t value);
+    void store(uint16_t address, uint8_t value);
+    void store(uint16_t address, int value);
+    void store(uint16_t address, uint16_t value);
+    void store(uint16_t address, uint32_t value);
     // memory write with data segment
-    void setDxlData(uint16_t address, uint16_t wSize, uint8_t *value);
+    void store(uint16_t address, uint16_t wSize, uint8_t *value);
     // READ Data from data_dyn
     void memRead(uint16_t address, uint16_t readSize, uint8_t *outData, uint16_t *outDataSize, uint16_t maxSize);
     void memRead(uint16_t address, uint16_t *readSize, uint8_t *outData, uint16_t *outDataSize, uint16_t maxSize);
 
     // EEPROM MANAGEMENT
-    uint8_t loadEEPROM();
-    bool checkDataDynCRC();
+
     uint8_t writeEEPROM(uint16_t address, uint8_t value);
     void data2EEPROM();
     void storeDataDynCRC();
