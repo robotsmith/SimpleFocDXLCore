@@ -5,10 +5,11 @@
 #include <dxlUtils.h>
 
 // EEPROM
-#define EEPROM_ENABLED
+//#define EEPROM_ENABLED
 
+//#define FLASH_END 0x0801FFFU
 #define EEPROM_LENGTH E2END
-#define EEPROM_FIRST_ADDRESS 1024
+#define EEPROM_FIRST_ADDRESS 0
 #define EEPROM_CRCL EEPROM_FIRST_ADDRESS + 150
 #define EEPROM_CRCH EEPROM_FIRST_ADDRESS + 151
 #define EEPROM_ADDRESSES 64
@@ -117,8 +118,8 @@ public:
     // memory write with data segment
     void store(uint16_t address, uint16_t wSize, uint8_t *value);
     // READ Data from data_dyn
-    void memRead(uint16_t address, uint16_t readSize, uint8_t *outData, uint16_t *outDataSize, uint16_t maxSize);
-    void memRead(uint16_t address, uint16_t *readSize, uint8_t *outData, uint16_t *outDataSize, uint16_t maxSize);
+    void memRead(uint16_t address, uint16_t readSize, uint8_t *outData, uint16_t *outDataSize);
+    void memRead(uint16_t address, uint16_t *readSize, uint8_t *outData, uint16_t *outDataSize);
 
     // EEPROM MANAGEMENT
 
