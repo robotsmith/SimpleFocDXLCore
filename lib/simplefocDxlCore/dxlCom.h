@@ -11,7 +11,7 @@
 #define HALF_DUPLEX_MODE
 
 // COM BUFFERS
-#define PACKET_BUFFER_SIZE 155
+#define PACKET_BUFFER_SIZE 180
 
 //— Instruction —
 #define INST_PING 0x01

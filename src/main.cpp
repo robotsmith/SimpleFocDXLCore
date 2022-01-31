@@ -21,6 +21,8 @@
 #define DRV_FLT PB14
 #define DRV_NRST PB13
 #define STS_LED PB14
+#define INVOLTAGE_PIN  PA0
+#define TEMPERATURE_PIN PA1
 
 MagneticSensorI2CConfig_s MySensorConfig = {
     .chip_address = 0x40,
@@ -54,7 +56,9 @@ void setup()
   digitalWrite(DRV_NSLP, HIGH);
   digitalWrite(STS_LED, LOW);
 
-  Wire.setSDA(PB11);
+  // Attach Hardware
+  mydxl.attachHarware(STS_LED,TEMPERATURE_PIN,INVOLTAGE_PIN);
+      Wire.setSDA(PB11);
   Wire.setSCL(PB10);
   // Wire.setSCL(PB6);
   // Wire.setSDA(PB7);
@@ -81,7 +85,7 @@ void setup()
   motor.PID_velocity.I = 1.0;
   motor.PID_velocity.D = 0.0;
   motor.PID_velocity.output_ramp = 0.0;
-  motor.PID_velocity.limit = 3.0;
+  motor.PID_velocity.limit = 30.0;
 
   // Low pass filtering time constant
   motor.LPF_velocity.Tf = 0.02;
@@ -107,7 +111,7 @@ void setup()
   // motor.modulation_centered = 1.0;
 
   // Limits
-  motor.velocity_limit = 20.0;
+  motor.velocity_limit = 2000.0;
   motor.voltage_limit = 3.0;
   motor.current_limit = 0;
 
@@ -117,7 +121,7 @@ void setup()
   Serial1.setHalfDuplex();
 #endif
   Serial1.begin(SERIAL_BAUDRATE);
-  mydxl.attach(Serial1);
+  mydxl.attachSerial(Serial1);
   Serial1.print("CPU:");
   Serial1.println(F_CPU);
   // comment out if not needed
