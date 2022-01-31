@@ -51,7 +51,7 @@ void simplefocDxlCore::loadDefaultMem()
     // ACCELERATION LIMIT
 
     // VELOCITY LIMIT
-
+    dxlmem.store(ADD_VELOCITY_LIMIT, (uint16_t)0xFFFFF);
     // POSITION LIMIT
     dxlmem.store(ADD_MAX_POSITION_LIMIT, (uint16_t)0xFFFFF);
     dxlmem.store(ADD_MIN_POSITION_LIMIT, (uint16_t)0x0);
@@ -59,7 +59,7 @@ void simplefocDxlCore::loadDefaultMem()
     dxlmem.store(ADD_TORQUE_ENABLE, (uint8_t)0x00); // 58.4 rev/min
 }
 
-void simplefocDxlCore::attach(HardwareSerial &serial)
+void simplefocDxlCore::attachSerial(HardwareSerial &serial)
 {
     dxlcom.attach(serial);
 }
@@ -123,8 +123,8 @@ void simplefocDxlCore::executePacketCommand()
         uint16_t wAddress = *(dxlcom.inPacket.buffer + PARAM_GAP) + (*(dxlcom.inPacket.buffer + 1 + PARAM_GAP) << 8);
         // Remove address 4 (CRC + size position) bytes from size and select the right parameters (+2 bytes)
         // |L=8:HEADERS,ID,... (PARAM_GAP)|L=2:ADD|L=2:size to read|L=2:CRC|
-        uint16_t size = dxlcom.inPacket.currentSize-PARAM_GAP-3;
-        dxlmem.store(wAddress, (size), (dxlcom.inPacket.buffer +PARAM_GAP+2));
+        uint16_t size = dxlcom.inPacket.currentSize - PARAM_GAP - 3;
+        dxlmem.store(wAddress, (size), (dxlcom.inPacket.buffer + PARAM_GAP + 2));
     }
     else
     {
@@ -164,7 +164,13 @@ void simplefocDxlCore::refreshMotorData()
     // ADD_VELOCITY_TRAJECTORY
     // ADD_POSITION_TRAJECTORY
     // ADD_PRESENT_INPUT_VOLTAGE
+    // R2 = 2200  / R1 = 10000 / MCU voltage 3.3V / DXL multiplier 10
+    uint16_t involtage = (double)(analogRead(_in_voltage) * 0.18);
+    dxlmem.store(ADD_PRESENT_INPUT_VOLTAGE, (uint16_t)(involtage));
+
     // ADD_PRESENT_TEMPERATURE
+    uint8_t temperature = analogRead(_temp_pin) * 0.0806;
+    dxlmem.store(ADD_PRESENT_TEMPERATURE, (uint8_t)temperature);
 }
 
 void simplefocDxlCore::update_parameters()
@@ -176,7 +182,7 @@ void simplefocDxlCore::update_parameters()
     // ADD_CURRENT_LIMIT
     // ADD_ACCELERATION_LIMIT
     // ADD_VELOCITY_LIMIT
-    motor->velocity_limit = (double)dxlmem.getValueFromDxlData(ADD_VELOCITY_LIMIT, 4) * 0.02398;
+    motor->PID_velocity.limit = (double)dxlmem.getValueFromDxlData(ADD_VELOCITY_LIMIT, 4) * 0.02398;
     // ADD_MAX_POSITION_LIMIT
     // ADD_MIN_POSITION_LIMIT
     // ADD_SHUTDOWN
@@ -220,5 +226,6 @@ void simplefocDxlCore::update_parameters()
     // ADD_VELOCITY_TRAJECTORY
     // ADD_POSITION_TRAJECTORY
     // ADD_PRESENT_INPUT_VOLTAGE
+
     // ADD_PRESENT_TEMPERATURE
 }
