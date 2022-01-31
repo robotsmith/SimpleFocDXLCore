@@ -26,7 +26,7 @@ bool dxlMemory::CheckEEPROM_CRC()
   char crch = eeprom_buffered_read_byte(EEPROM_CRCH);
   unsigned short crc_in_eeprom = crcl + (crch << 8);
   // EEPROM GOT THE RIGHT CRC ??
-  if (crc == crc_in_eeprom)
+  if ((crc == crc_in_eeprom )&& (crc !=0))
     return false;
 
   // ELSE
@@ -135,7 +135,7 @@ void dxlMemory::store(uint16_t address, uint16_t wSize, uint8_t *value)
   }
 }
 // READ Data from data_dyn
-void dxlMemory::memRead(uint16_t address, uint16_t *readSize, uint8_t *outData, uint16_t *outDataSize, uint16_t maxSize)
+void dxlMemory::memRead(uint16_t address, uint16_t *readSize, uint8_t *outData, uint16_t *outDataSize)
 {
   // Resize max lenght
   uint16_t sizetoread = *readSize;
@@ -143,15 +143,13 @@ void dxlMemory::memRead(uint16_t address, uint16_t *readSize, uint8_t *outData, 
   {
     sizetoread = DXL_DATA_SIZE - address;
   }
-  else if (maxSize > sizetoread + *outDataSize)
-    sizetoread = maxSize - *outDataSize;
   for (uint16_t i = 0; i < sizetoread; i++)
   {
     *(outData + *outDataSize) = *(dyn_data + i + address);
     *(outDataSize) += 1;
   }
 }
-void dxlMemory::memRead(uint16_t address, uint16_t readSize, uint8_t *outData, uint16_t *outDataSize, uint16_t maxSize)
+void dxlMemory::memRead(uint16_t address, uint16_t readSize, uint8_t *outData, uint16_t *outDataSize)
 {
   // Resize max lenght
   uint16_t sizetoread = readSize;
@@ -159,13 +157,12 @@ void dxlMemory::memRead(uint16_t address, uint16_t readSize, uint8_t *outData, u
   {
     sizetoread = DXL_DATA_SIZE - address;
   }
-  else if (maxSize > sizetoread + *outDataSize)
-    sizetoread = maxSize - *outDataSize;
   for (uint16_t i = 0; i < sizetoread; i++)
   {
     *(outData + *outDataSize) = *(dyn_data + i + address);
     *(outDataSize) += 1;
   }
+
 }
 
 uint8_t dxlMemory::writeEEPROM(uint16_t address, uint8_t value)

@@ -25,9 +25,9 @@ void simplefocDxlCore::loadDefaultMem()
     // MODEL NUMBER
     dxlmem.store(ADD_MODEL_NUMBER, (uint16_t)0x0406); // XM430
     // MODEL FIRMWARE
-    dxlmem.store(ADD_VERSION_OF_FIRMWARE, (uint8_t)0x01);
+    dxlmem.store(ADD_VERSION_OF_FIRMWARE, (uint8_t)0x26);
     // ID
-    dxlmem.store(ADD_ID, (uint8_t)0x00);
+    dxlmem.store(ADD_ID, (uint8_t)0x01);
     // BAUDRATE
     dxlmem.store(ADD_BAUDRATE, (uint8_t)0x02); // 115200
     // Drive mode
@@ -65,6 +65,9 @@ void simplefocDxlCore::attach(HardwareSerial &serial)
 }
 void simplefocDxlCore::update()
 {
+    // Check incoming serial
+    dxlcom.checkSerial();
+
     // Check if a incoming packet is available
     if (dxlcom.packetAvailable())
     {
@@ -74,9 +77,10 @@ void simplefocDxlCore::update()
             // Execute the packet
             executePacketCommand();
             // Update parameter if one is available
-            if (pending_parameter) {
+            if (pending_parameter)
+            {
                 update_parameters();
-            pending_parameter = false;
+                pending_parameter = false;
             }
         }
         // Clear packet
@@ -85,9 +89,6 @@ void simplefocDxlCore::update()
 
     // Update data from motor
     refreshMotorData();
-
-    // Check incoming serial
-    dxlcom.checkSerial();
 }
 void simplefocDxlCore::executePacketCommand()
 {
@@ -99,17 +100,19 @@ void simplefocDxlCore::executePacketCommand()
     if (dxlcom.inPacket.instruction() == INST_PING)
     {
         // Add model number to the packet
-        dxlmem.memRead(ADD_MODEL_NUMBER, 2, dxlcom.outPacket.buffer, &(dxlcom.outPacket.currentSize), PACKET_BUFFER_SIZE);
+        dxlmem.memRead(ADD_MODEL_NUMBER, 2, dxlcom.outPacket.buffer, &(dxlcom.outPacket.currentSize));
         // Add firmware version to the packet
-        dxlmem.memRead(ADD_VERSION_OF_FIRMWARE, 2, dxlcom.outPacket.buffer, &(dxlcom.outPacket.currentSize), PACKET_BUFFER_SIZE);
+        dxlmem.memRead(ADD_VERSION_OF_FIRMWARE, 1, dxlcom.outPacket.buffer, &(dxlcom.outPacket.currentSize));
     }
     else if (dxlcom.inPacket.instruction() == INST_READ)
     {
         // ADDRESS READ
-        uint16_t address = *(dxlcom.inPacket.buffer) + (*(dxlcom.inPacket.buffer + 1) << 8);
-        uint16_t readsize = *(dxlcom.inPacket.buffer + 2) + (*(dxlcom.inPacket.buffer + 3) << 8);
+        uint16_t address = *(dxlcom.inPacket.buffer + PARAM_GAP) + (*(dxlcom.inPacket.buffer + 1 + PARAM_GAP) << 8);
+        uint16_t readsize = *(dxlcom.inPacket.buffer + 2 + PARAM_GAP) + (*(dxlcom.inPacket.buffer + 3 + PARAM_GAP) << 8);
         // FILL READ DATA
-        dxlmem.memRead(address, readsize, dxlcom.outPacket.buffer, &(dxlcom.outPacket.currentSize), PACKET_BUFFER_SIZE);
+        if (readsize + address + dxlcom.outPacket.currentSize + 2 > PACKET_BUFFER_SIZE)
+            readsize = PACKET_BUFFER_SIZE - address - dxlcom.outPacket.currentSize - 2;
+        dxlmem.memRead(address, readsize, dxlcom.outPacket.buffer, &(dxlcom.outPacket.currentSize));
     }
     else if (dxlcom.inPacket.instruction() == INST_WRITE)
     {
@@ -117,15 +120,20 @@ void simplefocDxlCore::executePacketCommand()
         pending_parameter = true;
 
         // Writ address
-        uint16_t wAddress = *(dxlcom.inPacket.buffer) + (*(dxlcom.inPacket.buffer + 1) << 8);
-        // Remove address 2 bytes from size and select the right parameters (+2 bytes)
-        dxlmem.store(wAddress, dxlcom.outPacket.currentSize - 2, (dxlcom.inPacket.buffer + 2));
+        uint16_t wAddress = *(dxlcom.inPacket.buffer + PARAM_GAP) + (*(dxlcom.inPacket.buffer + 1 + PARAM_GAP) << 8);
+        // Remove address 4 (CRC + size position) bytes from size and select the right parameters (+2 bytes)
+        // |L=8:HEADERS,ID,... (PARAM_GAP)|L=2:ADD|L=2:size to read|L=2:CRC|
+        uint16_t size = dxlcom.inPacket.currentSize-PARAM_GAP-3;
+        dxlmem.store(wAddress, (size), (dxlcom.inPacket.buffer +PARAM_GAP+2));
     }
     else
     {
         // $TODO
     }
-
+    // Set ID before sending
+    dxlcom.outPacket.setId(dxlmem.getValueFromDxlData(ADD_ID));
+    // Finish packet
+    dxlcom.closeStatusPacket();
     // Status packet is ready
     dxlcom.sendOutPacket();
 }

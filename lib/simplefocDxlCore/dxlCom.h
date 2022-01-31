@@ -32,6 +32,8 @@
 #define P_HEADER_3 0xFD
 #define P_RESERVED 0x00
 
+// PACKET MANAGEMENT
+#define PARAM_GAP 8
 /*
   This class is a packet description with everything to decode or recode
 */
@@ -91,7 +93,9 @@ public:
   @return id of the packet's device ID
   */
   uint8_t getId() { return buffer[4]; }
-
+  /* Close packet and fill with informations
+   */
+  void close();
   /* Get instruction of the packet
   @return instruction
   */
@@ -133,6 +137,9 @@ public:
   /* Send the status packet will all informations
    */
   void sendOutPacket();
+  /* Close Status packet, fill with all informations needed to be correct
+   */
+  void closeStatusPacket();
   /* Set ID of the attached device
   @param id ID of the packet
   */

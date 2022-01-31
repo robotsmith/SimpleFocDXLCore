@@ -117,6 +117,7 @@ void setup()
   Serial1.setHalfDuplex();
 #endif
   Serial1.begin(SERIAL_BAUDRATE);
+  mydxl.attach(Serial1);
   Serial1.print("CPU:");
   Serial1.println(F_CPU);
   // comment out if not needed
