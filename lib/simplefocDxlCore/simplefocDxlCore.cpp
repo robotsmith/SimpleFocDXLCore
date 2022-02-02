@@ -133,6 +133,10 @@ void simplefocDxlCore::executePacketCommand()
         uint16_t size = dxlcom.inPacket.currentSize - PARAM_GAP - 3;
         dxlmem.store(wAddress, (size), (dxlcom.inPacket.buffer + PARAM_GAP + 2));
     }
+    else if (dxlcom.inPacket.instruction() == INST_REBOOT)
+    {
+        NVIC_SystemReset();
+    }
     else
     {
         // $TODO
@@ -142,13 +146,9 @@ void simplefocDxlCore::executePacketCommand()
     // Finish packet
     dxlcom.closeStatusPacket();
 
-    // volatile long tmp = micros();
 
-    // Status packet is ready
     dxlcom.sendOutPacket();
-    /*  tmp = micros() - tmp;
-      tmp = tmp;*/
-    tmp_flag = true;
+
 }
 void simplefocDxlCore::refreshMotorData()
 {
@@ -170,10 +170,11 @@ void simplefocDxlCore::refreshMotorData()
     // ADD_MOVING_STATUS
     // ADD_PRESENT_PWM
     // ADD_PRESENT_CURRENT
+    // dxlmem.store(ADD_PRESENT_CURRENT, (uint32_t)(abs(motor->current_sp*2.69)));
     // ADD_PRESENT_VELOCITY
-
+    dxlmem.store(ADD_PRESENT_VELOCITY, (uint32_t)(abs(motor->shaft_velocity / 0.02398)));
     // ADD_PRESENT_POSITION
-    dxlmem.store(ADD_PRESENT_POSITION, (uint16_t)(motor->shaft_angle / (2 * 3.1415 / 4095)));
+    dxlmem.store(ADD_PRESENT_POSITION, (uint32_t)(motor->shaft_angle / (2 * 3.1415 / 4095)));
     // ADD_VELOCITY_TRAJECTORY
     // ADD_POSITION_TRAJECTORY
 
@@ -253,6 +254,7 @@ void simplefocDxlCore::update_parameters()
     // ADD_PRESENT_PWM
     // ADD_PRESENT_CURRENT
     // ADD_PRESENT_VELOCITY
+
     // ADD_PRESENT_POSITION
     // ADD_VELOCITY_TRAJECTORY
     // ADD_POSITION_TRAJECTORY

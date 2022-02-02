@@ -185,9 +185,9 @@ uint8_t dxlPacket::storeByte(byte b)
       {
         crc += b << 8;
 
-        unsigned short crc = crc_conversion(0, buffer, currentSize - 1);
+        unsigned short crcc = crc_conversion(0, buffer, currentSize - 1);
 
-        if (crc == crc)
+        if (crc == crcc)
         {
           _complete = true;
           return 0;

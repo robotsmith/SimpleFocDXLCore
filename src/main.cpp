@@ -97,7 +97,7 @@ void setup()
   motor.P_angle.output_ramp = 0.0;
   motor.P_angle.limit = 50.0;
   // Low pass filtering time constant
-  motor.LPF_angle.Tf = 0.01;
+  motor.LPF_angle.Tf = 0.02;
 
   motor.P_angle.limit = 100.0;
 
@@ -109,7 +109,7 @@ void setup()
 
   // Limits
   motor.velocity_limit = 1000.0 / 9.5493; // Rad/s -> RPM : 1000RPM
-  motor.voltage_limit = 3.0;
+  motor.voltage_limit = 4.0;
   motor.current_limit = 0.0;
 
   // use monitoring with serial for motor init
@@ -129,7 +129,7 @@ void setup()
   // align encoder and start FOC
   motor.initFOC();
 
-  motor.enabled = false;
+  motor.disable();
   // set the inital target value
   // motor.target = 2;
 
@@ -143,18 +143,14 @@ void setup()
 
 void loop()
 {
-  volatile long temps_FOC = micros();
+  //volatile long temps_FOC = micros();
   motor.loopFOC();
   motor.move();
-  temps_FOC = micros() - temps_FOC;
+  //temps_FOC = micros() - temps_FOC;
 
   // Serial1.println(tmp);
-  volatile long temps_DXL = micros();
+  //volatile long temps_DXL = micros();
   mydxl.update();
-  temps_DXL = micros() - temps_DXL;
-  if (mydxl.tmp_flag)
-  {
+  //temps_DXL = micros() - temps_DXL;
 
-    mydxl.tmp_flag = false;
-  }
 }
