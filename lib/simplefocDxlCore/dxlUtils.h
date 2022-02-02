@@ -55,6 +55,7 @@ inline unsigned short crc_conversion(unsigned short crc_accum, unsigned char *da
    @brief Minimal class to replace std::vector
 
 */
+/*
 template <typename Data>
 class Vector
 {
@@ -109,5 +110,5 @@ private:
     d_data = newdata;
   }; // Allocates double the old space
 };
-
+*/
 #endif

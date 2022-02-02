@@ -1,5 +1,5 @@
 #include "simplefocDxlCore.h"
-
+#define LIGHT_VERSION
 simplefocDxlCore::simplefocDxlCore(BLDCMotor *_motor)
 {
     // Associate simplefoc motor
@@ -15,6 +15,12 @@ void simplefocDxlCore::factoryResetMem()
     // Load default
     loadDefaultMem();
     // Store memory
+}
+void simplefocDxlCore::init()
+{
+    // Refresh parameter from simplefoc
+    refreshMotorData();
+    update_parameters();
 }
 void simplefocDxlCore::loadDefaultMem()
 {
@@ -51,7 +57,7 @@ void simplefocDxlCore::loadDefaultMem()
     // ACCELERATION LIMIT
 
     // VELOCITY LIMIT
-    dxlmem.store(ADD_VELOCITY_LIMIT, (uint16_t)0xFFFFF);
+    dxlmem.store(ADD_VELOCITY_LIMIT, (uint32_t)(1000 / 0.02398));
     // POSITION LIMIT
     dxlmem.store(ADD_MAX_POSITION_LIMIT, (uint16_t)0xFFFFF);
     dxlmem.store(ADD_MIN_POSITION_LIMIT, (uint16_t)0x0);
@@ -71,6 +77,7 @@ void simplefocDxlCore::update()
     // Check if a incoming packet is available
     if (dxlcom.packetAvailable())
     {
+
         // Is this packet for this device?
         if (dxlcom.inPacket.getId() == dxlmem.getValueFromDxlData(ADD_ID) || dxlcom.inPacket.getId() == 0xFE)
         {
@@ -134,8 +141,14 @@ void simplefocDxlCore::executePacketCommand()
     dxlcom.outPacket.setId(dxlmem.getValueFromDxlData(ADD_ID));
     // Finish packet
     dxlcom.closeStatusPacket();
+
+    // volatile long tmp = micros();
+
     // Status packet is ready
     dxlcom.sendOutPacket();
+    /*  tmp = micros() - tmp;
+      tmp = tmp;*/
+    tmp_flag = true;
 }
 void simplefocDxlCore::refreshMotorData()
 {
@@ -163,14 +176,19 @@ void simplefocDxlCore::refreshMotorData()
     dxlmem.store(ADD_PRESENT_POSITION, (uint16_t)(motor->shaft_angle / (2 * 3.1415 / 4095)));
     // ADD_VELOCITY_TRAJECTORY
     // ADD_POSITION_TRAJECTORY
+
+#ifndef LIGHT_VERSION
     // ADD_PRESENT_INPUT_VOLTAGE
     // R2 = 2200  / R1 = 10000 / MCU voltage 3.3V / DXL multiplier 10
     uint16_t involtage = (double)(analogRead(_in_voltage) * 0.18);
     dxlmem.store(ADD_PRESENT_INPUT_VOLTAGE, (uint16_t)(involtage));
 
-    // ADD_PRESENT_TEMPERATURE
-    uint8_t temperature = analogRead(_temp_pin) * 0.0806;
+    // ADD_PRESENT_TEMPERATURE MCP9700T-E/TT
+    float voltage = float(analogRead(_temp_pin)) * 3300.0 / 1024.0;
+    float temperature = (voltage - 500.0) / 10;
+    // uint8_t temperature = (double)(analogRead(_temp_pin) * 0.0806);
     dxlmem.store(ADD_PRESENT_TEMPERATURE, (uint8_t)temperature);
+#endif
 }
 
 void simplefocDxlCore::update_parameters()
@@ -182,16 +200,29 @@ void simplefocDxlCore::update_parameters()
     // ADD_CURRENT_LIMIT
     // ADD_ACCELERATION_LIMIT
     // ADD_VELOCITY_LIMIT
-    motor->PID_velocity.limit = (double)dxlmem.getValueFromDxlData(ADD_VELOCITY_LIMIT, 4) * 0.02398;
+    volatile uint32_t stored_vel = dxlmem.getValueFromDxlData(ADD_VELOCITY_LIMIT, 4);
+    double velocity = stored_vel * 0.02398;
+    motor->velocity_limit = (double)velocity;
     // ADD_MAX_POSITION_LIMIT
     // ADD_MIN_POSITION_LIMIT
     // ADD_SHUTDOWN
 
     //***RAM
     // ADD_TORQUE_ENABLE
-    motor->enabled = dxlmem.getValueFromDxlData(ADD_TORQUE_ENABLE, 1);
-    // ADD_LED
+    if (dxlmem.getValueFromDxlData(ADD_TORQUE_ENABLE, 1))
+    {
+        motor->enable();
+    }
+    else
+        motor->disable();
 
+    // ADD_LED
+    if (dxlmem.getValueFromDxlData(ADD_LED, 1) == 1)
+    {
+        digitalWrite(_led_pin, HIGH);
+    }
+    else
+        digitalWrite(_led_pin, LOW);
     // ADD_HARDWARE_ERROR_STATUS
     // ADD_VELOCITY_I_GAIN
     motor->PID_velocity.I = (double)dxlmem.getValueFromDxlData(ADD_VELOCITY_I_GAIN, 2) / 128;
