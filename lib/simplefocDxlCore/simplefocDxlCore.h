@@ -13,6 +13,8 @@ public:
 
     // Constructor
     simplefocDxlCore(BLDCMotor *_motor);
+    //INIT
+    void init();
     /*
     Update the dxl core
     */
@@ -37,8 +39,8 @@ public:
         // Init outputs
         pinMode(_led_pin,OUTPUT);
         digitalWrite(_led_pin,LOW);
-        pinMode(_temp_pin,INPUT_ANALOG);
-        pinMode(_in_voltage,INPUT_ANALOG);
+        pinMode(_temp_pin,INPUT);
+        pinMode(_in_voltage,INPUT);
         
     }
 
@@ -50,8 +52,10 @@ public:
 
     // Execute the command in the DXL packet
     void executePacketCommand();
-    // *** Variables
 
+    // *** Variables
+    //TEMPORARY
+    bool tmp_flag = false;
 private:
     // *** Functions
 
@@ -80,6 +84,8 @@ private:
     byte _temp_pin;
     // INPUT VOLTAGE
     byte _in_voltage;
+
+
 };
 
 #endif

@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #include <dxlMemory.h>
 #include <dxlUtils.h>
-
+#include <EEPROM.h>
 // COM
 #define HALF_DUPLEX_MODE
 

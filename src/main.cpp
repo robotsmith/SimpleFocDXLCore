@@ -1,15 +1,13 @@
-#include <Arduino.h>
 
+//#if __has_include("hal_conf_extra.h")
+#include "hal_conf_extra.h"
+//#endif
+#include <Arduino.h>
 #include <Wire.h>
 #include <BLDCMotor.h>
 #include <drivers/BLDCDriver3PWM.h>
 #include <sensors/MagneticSensorI2C.h>
 #include "simplefocDxlCore.h"
-#include "dxlCom.h"
-#include "dxlMemory.h"
-#if __has_include("hal_conf_extra.h")
-#include "hal_conf_extra.h"
-#endif
 
 #define SERIAL_BAUDRATE 1000000
 
@@ -21,7 +19,7 @@
 #define DRV_FLT PB14
 #define DRV_NRST PB13
 #define STS_LED PB14
-#define INVOLTAGE_PIN  PA0
+#define INVOLTAGE_PIN PA0
 #define TEMPERATURE_PIN PA1
 
 MagneticSensorI2CConfig_s MySensorConfig = {
@@ -43,6 +41,9 @@ HardwareSerial Serial1(PA10, PA9);
 // WRAPPER
 simplefocDxlCore mydxl(&motor);
 
+// I2C
+//            SDA  SCL
+TwoWire Wire2(PB11, PB10);
 // SETUP
 void setup()
 {
@@ -57,14 +58,14 @@ void setup()
   digitalWrite(STS_LED, LOW);
 
   // Attach Hardware
-  mydxl.attachHarware(STS_LED,TEMPERATURE_PIN,INVOLTAGE_PIN);
-      Wire.setSDA(PB11);
-  Wire.setSCL(PB10);
-  // Wire.setSCL(PB6);
-  // Wire.setSDA(PB7);
-  // initialise magnetic sensor hardware
-  sensor.init(&Wire);
-  Wire.setClock(400000);
+  mydxl.attachHarware(STS_LED, TEMPERATURE_PIN, INVOLTAGE_PIN);
+  // Wire.setSDA(PB11);
+  // Wire.setSCL(PB10);
+  //  Wire.setSCL(PB6);
+  //  Wire.setSDA(PB7);
+  //  initialise magnetic sensor hardware
+  sensor.init(&Wire2);
+  Wire2.setClock(400000);
   // link the motor to the sensor
   motor.linkSensor(&sensor);
 
@@ -85,7 +86,7 @@ void setup()
   motor.PID_velocity.I = 1.0;
   motor.PID_velocity.D = 0.0;
   motor.PID_velocity.output_ramp = 0.0;
-  motor.PID_velocity.limit = 30.0;
+  motor.PID_velocity.limit = 300.0;
 
   // Low pass filtering time constant
   motor.LPF_velocity.Tf = 0.02;
@@ -99,10 +100,6 @@ void setup()
   motor.LPF_angle.Tf = 0.01;
 
   motor.P_angle.limit = 100.0;
-  // Limits
-  motor.velocity_limit = 50.0;
-  motor.voltage_limit = 3.0;
-  motor.current_limit = 0.0;
 
   // motor phase resistance
   // motor.phase_resistance = 4.823;
@@ -111,9 +108,9 @@ void setup()
   // motor.modulation_centered = 1.0;
 
   // Limits
-  motor.velocity_limit = 2000.0;
+  motor.velocity_limit = 1000.0 / 9.5493; // Rad/s -> RPM : 1000RPM
   motor.voltage_limit = 3.0;
-  motor.current_limit = 0;
+  motor.current_limit = 0.0;
 
   // use monitoring with serial for motor init
   // monitoring port
@@ -139,15 +136,25 @@ void setup()
   // Run user commands to configure and the motor (find the full command list in docs.simplefoc.com)
   // Serial1.println(F("Motor ready"));
 
+  // INIT DXL DEVICE
+  mydxl.init();
   _delay(200);
 }
 
 void loop()
 {
-  // long tmp = micros();
+  volatile long temps_FOC = micros();
   motor.loopFOC();
   motor.move();
-  // tmp = micros() - tmp;
+  temps_FOC = micros() - temps_FOC;
+
   // Serial1.println(tmp);
+  volatile long temps_DXL = micros();
   mydxl.update();
+  temps_DXL = micros() - temps_DXL;
+  if (mydxl.tmp_flag)
+  {
+
+    mydxl.tmp_flag = false;
+  }
 }

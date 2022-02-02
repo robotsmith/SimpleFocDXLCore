@@ -46,8 +46,9 @@ void dxlCom::checkSerial()
 void dxlCom::sendOutPacket()
 {
 
-  while (!outPacket.isEmpty())
-    dxlserial->print((char)outPacket.pop_front());
+  //while (!outPacket.isEmpty())
+  dxlserial->write(outPacket.buffer,outPacket.currentSize);
+    //dxlserial->print((char)outPacket.pop_front());
 }
 /* function setId()
       @param unsigned int _id : Dynamixel device indentifier (id)
