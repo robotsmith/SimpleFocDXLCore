@@ -54,8 +54,6 @@ public:
     void executePacketCommand();
 
     // *** Variables
-    //TEMPORARY
-    bool tmp_flag = false;
 private:
     // *** Functions
 
