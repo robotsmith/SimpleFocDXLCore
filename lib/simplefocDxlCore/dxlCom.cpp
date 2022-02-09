@@ -46,9 +46,9 @@ void dxlCom::checkSerial()
 void dxlCom::sendOutPacket()
 {
 
-  //while (!outPacket.isEmpty())
-  dxlserial->write(outPacket.buffer,outPacket.currentSize);
-    //dxlserial->print((char)outPacket.pop_front());
+  // while (!outPacket.isEmpty())
+  dxlserial->write(outPacket.buffer, outPacket.currentSize);
+  // dxlserial->print((char)outPacket.pop_front());
 }
 /* function setId()
       @param unsigned int _id : Dynamixel device indentifier (id)
@@ -69,13 +69,17 @@ dxlPacket::dxlPacket()
 }
 void dxlPacket::close()
 {
+
   // Instruction
   buffer[7] = 0x55;
 
+  // Protocol error
+  buffer[8] = protocol_error;
+
   // Length
   uint16_t packetSize = currentSize - 5; // 4bytes headers + 1 ID + 2 length + 1 Error - 2 CRC + 1 because of size+1
-  buffer[5] = packetSize & 0xFF; // Length L
-  buffer[6] = packetSize >> 8;   // Length H
+  buffer[5] = packetSize & 0xFF;         // Length L
+  buffer[6] = packetSize >> 8;           // Length H
   // CRC
   unsigned short crc = crc_conversion(0, buffer, currentSize);
   buffer[currentSize] = crc & 0xFF;
@@ -108,6 +112,9 @@ void dxlPacket::clear()
   }
   else
     currentSize = 0;
+
+  // Clear error
+  protocol_error = 0x00;
 }
 bool dxlPacket::pushback(char element)
 {
@@ -134,7 +141,7 @@ char dxlPacket::pop_front()
   else
     return 0xFF;
 
-  return buffer[idx-1];
+  return buffer[idx - 1];
 }
 /* Check if the packet is empty or not
 @return true if the packet is empty
@@ -189,12 +196,16 @@ uint8_t dxlPacket::storeByte(byte b)
 
         if (crc == crcc)
         {
+          // Packet is complete and crc is OK
           _complete = true;
           return 0;
-          // Complete informations
         }
         else
-          abortPacket = true;
+        {
+          // abortPacket = true;
+          // Error is CRC error
+          protocol_error |= 0x03;
+        }
       }
       else
         abortPacket = true;

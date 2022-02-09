@@ -94,29 +94,47 @@ void simplefocDxlCore::update()
     // Check if a incoming packet is available
     if (dxlcom.packetAvailable())
     {
-
         // Is this packet for this device?
         if (dxlcom.inPacket.getId() == dxlmem.getValueFromDxlData(ADD_ID) || dxlcom.inPacket.getId() == 0xFE)
         {
-            // Execute the packet
-            executePacketCommand();
-            // Update parameter if one is available
-            if (pending_parameter)
+
+            // InPacket CRC OK ?
+            if (dxlcom.inPacket.protocol_error == 0)
             {
-                update_parameters();
-                pending_parameter = false;
-            }
+
+                // Clear outpacket
+                dxlcom.outPacket.clear();
+                // Execute the packet
+                executePacketCommand();
+                // Update parameter if one is available
+                if (pending_parameter)
+                {
+                    update_parameters();
+                    pending_parameter = false;
+                }
 
 // Store in EEPROM if needed
 #ifdef EEPROM_ENABLED
-            if (dxlmem.storeToEEPROM)
-            {
-                // remove flag
-                dxlmem.storeToEEPROM = false;
-                dxlmem.data2EEPROM();
-                // blinkStatus(2, 100);
-            }
+                if (dxlmem.storeToEEPROM)
+                {
+                    // remove flag
+                    dxlmem.storeToEEPROM = false;
+                    dxlmem.data2EEPROM();
+                    // blinkStatus(2, 100);
+                }
 #endif
+            }
+            else
+            {
+                // Transfer the input packet error decoding to the outpacket
+                dxlcom.outPacket.protocol_error |= dxlcom.inPacket.protocol_error;
+            }
+            // Set ID before sending
+            dxlcom.outPacket.setId(dxlmem.getValueFromDxlData(ADD_ID));
+            // Finish packet
+            dxlcom.closeStatusPacket();
+
+            dxlcom.sendOutPacket();
         }
         // Clear packet
         dxlcom.inPacket.clear();
@@ -126,8 +144,8 @@ void simplefocDxlCore::update()
     if (rcount == 0)
     {
         refreshPresentData();
-        uint16_t rec_dxl = micros() - temps_DXLC ;
-        uint32_t rec_foc = micros() - time_record -rec_dxl;
+        uint16_t rec_dxl = micros() - temps_DXLC;
+        uint32_t rec_foc = micros() - time_record - rec_dxl;
         dxlmem.store(ADD_GOAL_VELOCITY, rec_foc);
         dxlmem.store(ADD_GOAL_CURRENT, rec_dxl);
     }
@@ -141,9 +159,6 @@ void simplefocDxlCore::update()
 }
 void simplefocDxlCore::executePacketCommand()
 {
-
-    // Clear outpacket
-    dxlcom.outPacket.clear();
 
     // Execute instructions
     if (dxlcom.inPacket.instruction() == INST_PING)
@@ -183,16 +198,10 @@ void simplefocDxlCore::executePacketCommand()
     {
         factoryResetMem();
     }
-    else
+    else // Undifined instruction
     {
-        // $TODO
+        dxlcom.outPacket.protocol_error |= 0x02;
     }
-    // Set ID before sending
-    dxlcom.outPacket.setId(dxlmem.getValueFromDxlData(ADD_ID));
-    // Finish packet
-    dxlcom.closeStatusPacket();
-
-    dxlcom.sendOutPacket();
 }
 void simplefocDxlCore::refreshRAMData()
 {
@@ -233,11 +242,20 @@ void simplefocDxlCore::refreshPresentData()
     uint16_t involtage = (double)(analogRead(_in_voltage) * 0.18);
     dxlmem.store(ADD_PRESENT_INPUT_VOLTAGE, (uint16_t)(involtage));
 
+    // Involtage error handling
+    if (involtage < dxlmem.getValueFromDxlData(ADD_MIN_VOLTAGE_LIMIT, 2) || involtage > dxlmem.getValueFromDxlData(ADD_MIN_VOLTAGE_LIMIT, 2))
+        dxlcom.outPacket.protocol_error |= 0x01;
+
     // ADD_PRESENT_TEMPERATURE MCP9700T-E/TT
     float voltage = float(analogRead(_temp_pin)) * 3300.0 / 1024.0;
     float temperature = (voltage - 500.0) / 10;
     // uint8_t temperature = (double)(analogRead(_temp_pin) * 0.0806);
     dxlmem.store(ADD_PRESENT_TEMPERATURE, (uint8_t)temperature);
+
+    // Overheating error handling
+    if (temperature > dxlmem.getValueFromDxlData(ADD_TEMPERATURE_LIMIT))
+        dxlcom.outPacket.protocol_error |= 0x04;
+    
 
 #endif
 }

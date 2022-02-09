@@ -102,6 +102,8 @@ public:
   uint8_t instruction() { return buffer[7]; }
   // size of the buffer
   uint16_t currentSize;
+  // crc error for input packet
+  byte protocol_error;
 
 private:
   // Packet type: type 0 = command packet / 1 = status packet
