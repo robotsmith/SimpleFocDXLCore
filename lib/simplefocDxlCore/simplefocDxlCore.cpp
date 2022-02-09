@@ -1,25 +1,39 @@
 #include "simplefocDxlCore.h"
-#define LIGHT_VERSION
+
 simplefocDxlCore::simplefocDxlCore(BLDCMotor *_motor)
 {
     // Associate simplefoc motor
     motor = _motor;
-    // Init memory, if memory is not correct make a factory reset
-    if (dxlmem.load())
-    {
-        factoryResetMem();
-    }
 }
 void simplefocDxlCore::factoryResetMem()
 {
     // Load default
     loadDefaultMem();
-    // Store memory
+// Store into EEPROM
+#ifdef EEPROM_ENABLED
+    dxlmem.data2EEPROM();
+#endif
 }
 void simplefocDxlCore::init()
 {
+
+// Init memory, if memory is not correct make a factory reset
+#ifndef EEPROM_ENABLED
+    blinkStatus(10, 100);
+#else
+    if (dxlmem.load())
+    {
+
+        factoryResetMem();
+        blinkStatus(5, 100);
+        // Reboot for safety
+        NVIC_SystemReset();
+    }
+    else
+        blinkStatus(2, 500);
+#endif
     // Refresh parameter from simplefoc
-    refreshMotorData();
+    refreshRAMData();
     update_parameters();
 }
 void simplefocDxlCore::loadDefaultMem()
@@ -71,6 +85,9 @@ void simplefocDxlCore::attachSerial(HardwareSerial &serial)
 }
 void simplefocDxlCore::update()
 {
+    long temps_DXLC = 0;
+    if (rcount == 0)
+        temps_DXLC = micros();
     // Check incoming serial
     dxlcom.checkSerial();
 
@@ -89,13 +106,38 @@ void simplefocDxlCore::update()
                 update_parameters();
                 pending_parameter = false;
             }
+
+// Store in EEPROM if needed
+#ifdef EEPROM_ENABLED
+            if (dxlmem.storeToEEPROM)
+            {
+                // remove flag
+                dxlmem.storeToEEPROM = false;
+                dxlmem.data2EEPROM();
+                // blinkStatus(2, 100);
+            }
+#endif
         }
         // Clear packet
         dxlcom.inPacket.clear();
     }
 
     // Update data from motor
-    refreshMotorData();
+    if (rcount == 0)
+    {
+        refreshPresentData();
+        uint16_t rec_dxl = micros() - temps_DXLC ;
+        uint32_t rec_foc = micros() - time_record -rec_dxl;
+        dxlmem.store(ADD_GOAL_VELOCITY, rec_foc);
+        dxlmem.store(ADD_GOAL_CURRENT, rec_dxl);
+    }
+
+    rcount++;
+    if (rcount >= 200)
+    {
+        time_record = micros();
+        rcount = 0;
+    }
 }
 void simplefocDxlCore::executePacketCommand()
 {
@@ -137,6 +179,10 @@ void simplefocDxlCore::executePacketCommand()
     {
         NVIC_SystemReset();
     }
+    else if (dxlcom.inPacket.instruction() == INST_FACTORY_RESET)
+    {
+        factoryResetMem();
+    }
     else
     {
         // $TODO
@@ -146,16 +192,11 @@ void simplefocDxlCore::executePacketCommand()
     // Finish packet
     dxlcom.closeStatusPacket();
 
-
     dxlcom.sendOutPacket();
-
 }
-void simplefocDxlCore::refreshMotorData()
+void simplefocDxlCore::refreshRAMData()
 {
-
-    // ADD_VELOCITY_LIMIT
-    // dxlmem.memWrite(ADD_VELOCITY_LIMIT, (uint32_t)(motor->velocity_limit / 0.02398));
-
+    dxlmem.store(ADD_VELOCITY_LIMIT, (uint32_t)(motor->PID_velocity.limit)); // / 0.02398
     // ADD_VELOCITY_I_GAIN
     dxlmem.store(ADD_VELOCITY_I_GAIN, (uint16_t)(motor->PID_velocity.I * 128));
     // ADD_VELOCITY_P_GAIN
@@ -166,6 +207,14 @@ void simplefocDxlCore::refreshMotorData()
     dxlmem.store(ADD_POSITION_I_GAIN, (uint16_t)(motor->P_angle.I * 128));
     // ADD_POSITION_P_GAIN
     dxlmem.store(ADD_POSITION_P_GAIN, (uint16_t)(motor->P_angle.P * 16));
+    refreshPresentData();
+}
+void simplefocDxlCore::refreshPresentData()
+{
+
+    // ADD_VELOCITY_LIMIT
+    //
+
     // ADD_MOVING
     // ADD_MOVING_STATUS
     // ADD_PRESENT_PWM
@@ -189,6 +238,7 @@ void simplefocDxlCore::refreshMotorData()
     float temperature = (voltage - 500.0) / 10;
     // uint8_t temperature = (double)(analogRead(_temp_pin) * 0.0806);
     dxlmem.store(ADD_PRESENT_TEMPERATURE, (uint8_t)temperature);
+
 #endif
 }
 
@@ -202,8 +252,8 @@ void simplefocDxlCore::update_parameters()
     // ADD_ACCELERATION_LIMIT
     // ADD_VELOCITY_LIMIT
     volatile uint32_t stored_vel = dxlmem.getValueFromDxlData(ADD_VELOCITY_LIMIT, 4);
-    double velocity = stored_vel * 0.02398;
-    motor->velocity_limit = (double)velocity;
+    double velocity = stored_vel; // * 0.02398;
+    motor->PID_velocity.limit = (double)velocity;
     // ADD_MAX_POSITION_LIMIT
     // ADD_MIN_POSITION_LIMIT
     // ADD_SHUTDOWN
@@ -261,4 +311,15 @@ void simplefocDxlCore::update_parameters()
     // ADD_PRESENT_INPUT_VOLTAGE
 
     // ADD_PRESENT_TEMPERATURE
+}
+
+void simplefocDxlCore::blinkStatus(uint8_t nb, uint16_t delay_)
+{
+    for (uint8_t i = 0; i < nb; i++)
+    {
+        digitalWrite(_led_pin, HIGH);
+        delay(delay_ / 2);
+        digitalWrite(_led_pin, LOW);
+        delay(delay_ / 2);
+    }
 }

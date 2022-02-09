@@ -6,6 +6,7 @@
 #include <dxlCom.h>
 #include <dxlMemory.h>
 
+
 class simplefocDxlCore
 {
 public:
@@ -13,7 +14,7 @@ public:
 
     // Constructor
     simplefocDxlCore(BLDCMotor *_motor);
-    //INIT
+    // INIT
     void init();
     /*
     Update the dxl core
@@ -37,11 +38,10 @@ public:
         _in_voltage = input_voltage_pin;
 
         // Init outputs
-        pinMode(_led_pin,OUTPUT);
-        digitalWrite(_led_pin,LOW);
-        pinMode(_temp_pin,INPUT);
-        pinMode(_in_voltage,INPUT);
-        
+        pinMode(_led_pin, OUTPUT);
+        digitalWrite(_led_pin, LOW);
+        pinMode(_temp_pin, INPUT);
+        pinMode(_in_voltage, INPUT);
     }
 
     // Factory reset memory
@@ -53,12 +53,17 @@ public:
     // Execute the command in the DXL packet
     void executePacketCommand();
 
+    // Blink status led
+    void blinkStatus(uint8_t nb, uint16_t delay_);
     // *** Variables
 private:
     // *** Functions
 
-    // Refresh data from motor and update DXL memory
-    void refreshMotorData();
+    // Refresh data from motor and update DXL memory in RAM
+    void refreshRAMData();
+
+    // Refresh Current data from Device
+    void refreshPresentData();
     // Update parameters from com to memory
     void update_parameters();
 
@@ -83,7 +88,11 @@ private:
     // INPUT VOLTAGE
     byte _in_voltage;
 
+    //Time record
+    long time_record;
 
+    //Refresh Counter
+    uint8_t rcount=0;
 };
 
 #endif

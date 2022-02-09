@@ -4,73 +4,77 @@ dxlMemory::dxlMemory() { clear(); }
 
 bool dxlMemory::load()
 {
-  if (CheckEEPROM_CRC())
-  {
-    return true; // There is an CRC error
-  }
-  // Clear RAM
-  clear();
-  // Load EEPROM
-  if (loadEEPROM())
-    return true; // there is an issue in loading
-
-  return false;
+  return loadEEPROM();
 }
 
+/*
 bool dxlMemory::CheckEEPROM_CRC()
 {
   eeprom_buffer_fill();
   // GET CRC
-  unsigned short crc = crc_conversion(0, dyn_data, EEPROM_ADDRESSES - 1); // CRC WITHOUT CRC VALUE IN EEPROM (beginning after EEPROM_FIRST_ADDRESS )
+  unsigned short crc = crc_conversion(0, DXL_data, EEPROM_ADDRESSES - 1); // CRC WITHOUT CRC VALUE IN EEPROM (beginning after EEPROM_FIRST_ADDRESS )
   char crcl = eeprom_buffered_read_byte(EEPROM_CRCL);
   char crch = eeprom_buffered_read_byte(EEPROM_CRCH);
   unsigned short crc_in_eeprom = crcl + (crch << 8);
   // EEPROM GOT THE RIGHT CRC ??
-  if ((crc == crc_in_eeprom )&& (crc !=0))
+  if ((crc == crc_in_eeprom) && (crc != 0))
     return false;
 
   // ELSE
   return true;
 }
-
+*/
 // EEPROM MANAGEMENT
 bool dxlMemory::loadEEPROM()
 {
+
   eeprom_buffer_fill();
-  for (uint16_t i = 0; i < DXL_DATA_SIZE; i++)
+  for (uint16_t i = 0; i < EEPROM_ADDRESSES; i++)
   {
     if (i + EEPROM_FIRST_ADDRESS > EEPROM_LENGTH)
       return true;
     //*(data + i) = EEPROM.read(i + EEPROM_FIRST_ADDRESS);
-    *(dyn_data + i) = eeprom_buffered_read_byte(i + EEPROM_FIRST_ADDRESS);
+    *(DXL_data + i) = eeprom_buffered_read_byte(i + EEPROM_FIRST_ADDRESS);
   }
+  // Check CRC
+  unsigned short crc = crc_conversion(0, DXL_data, EEPROM_ADDRESSES - 1); // CRC WITHOUT CRC VALUE IN EEPROM (beginning after EEPROM_FIRST_ADDRESS )
+  char crcl = eeprom_buffered_read_byte(EEPROM_CRCL);
+  char crch = eeprom_buffered_read_byte(EEPROM_CRCH);
+  unsigned short crc_in_eeprom = crcl + (crch << 8);
+  // EEPROM GOT THE RIGHT CRC ??
+  if ((crc != crc_in_eeprom) || (crc == 0))
+    return true; // ISSUE
+
+  // OK
   return false;
 }
 
 void dxlMemory::data2EEPROM()
 {
-  for (uint16_t i = 0; i < DXL_DATA_SIZE; i++)
+  for (uint16_t i = 0; i < EEPROM_ADDRESSES; i++)
   {
     // EEPROM.update(i + EEPROM_FIRST_ADDRESS, *(data + i));
-    eeprom_buffered_write_byte(i + EEPROM_FIRST_ADDRESS, *(dyn_data + i));
+    eeprom_buffered_write_byte(i + EEPROM_FIRST_ADDRESS, *(DXL_data + i));
   }
-  // FLAG INITIALIZED
-  // EEPROM.update(0, 0x01);
-  eeprom_buffered_write_byte(0, 0x01);
+
+  // Compute and store CRC
+  uint16_t crc = DataDynCRC();
+  eeprom_buffered_write_byte(EEPROM_CRCL, crc & 0xFF);
+  eeprom_buffered_write_byte(EEPROM_CRCH, crc >> 8);
+
+  // Store into EEPROM
   eeprom_buffer_flush();
-  // Compute CRC
-  storeDataDynCRC();
 }
 
 void dxlMemory::clear()
 {
   for (uint16_t i = 0; i < DXL_DATA_SIZE; i++)
-    *(dyn_data + i) = 0;
+    *(DXL_data + i) = 0;
 }
 
 uint8_t dxlMemory::getValueFromDxlData(uint16_t address)
 {
-  return *(dyn_data + address);
+  return *(DXL_data + address);
 }
 uint32_t dxlMemory::getValueFromDxlData(uint16_t address, uint8_t len)
 {
@@ -79,7 +83,7 @@ uint32_t dxlMemory::getValueFromDxlData(uint16_t address, uint8_t len)
     return 0;
   for (uint8_t i = 0; i < len; i++)
   {
-    tmp = tmp | (*(dyn_data + address + i) << (8 * i));
+    tmp = tmp | (*(DXL_data + address + i) << (8 * i));
   }
 
   return tmp;
@@ -88,13 +92,13 @@ void dxlMemory::store(uint16_t address, uint8_t value)
 {
   if (address + 1 < DXL_DATA_SIZE)
   {
-    *(dyn_data + address) = value & 0xff;
+    *(DXL_data + address) = value & 0xff;
 
     // IF ROM data, save into EEPROM
 #ifdef EEPROM_ENABLED
     if (address < EEPROM_ADDRESSES)
     {
-      writeEEPROM(address, value);
+      storeToEEPROM = true;
     }
 #endif
   }
@@ -145,7 +149,7 @@ void dxlMemory::memRead(uint16_t address, uint16_t *readSize, uint8_t *outData, 
   }
   for (uint16_t i = 0; i < sizetoread; i++)
   {
-    *(outData + *outDataSize) = *(dyn_data + i + address);
+    *(outData + *outDataSize) = *(DXL_data + i + address);
     *(outDataSize) += 1;
   }
 }
@@ -159,10 +163,9 @@ void dxlMemory::memRead(uint16_t address, uint16_t readSize, uint8_t *outData, u
   }
   for (uint16_t i = 0; i < sizetoread; i++)
   {
-    *(outData + *outDataSize) = *(dyn_data + i + address);
+    *(outData + *outDataSize) = *(DXL_data + i + address);
     *(outDataSize) += 1;
   }
-
 }
 
 uint8_t dxlMemory::writeEEPROM(uint16_t address, uint8_t value)
@@ -174,16 +177,18 @@ uint8_t dxlMemory::writeEEPROM(uint16_t address, uint8_t value)
   /*eeprom[_buffered_write_byte(address + EEPROM_FIRST_ADDRESS, value);
     eeprom_buffer_flush();*/
   // Compute CRC
-  storeDataDynCRC();
-  return 0;
-}
-
-void dxlMemory::storeDataDynCRC()
-{
-
-  unsigned short crc = crc_conversion(0, dyn_data, EEPROM_ADDRESSES - 1);
-
+  uint16_t crc = DataDynCRC();
   // WRITE CRC
   EEPROM[EEPROM_CRCL] = crc & 0xFF;
   EEPROM[EEPROM_CRCH] = crc >> 8;
+
+  return 0;
+}
+
+uint16_t dxlMemory::DataDynCRC()
+{
+
+  unsigned short crc = crc_conversion(0, DXL_data, EEPROM_ADDRESSES - 1);
+
+  return crc;
 }
