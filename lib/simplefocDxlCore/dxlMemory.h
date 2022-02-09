@@ -4,8 +4,8 @@
 #include <EEPROM.h>
 #include <dxlUtils.h>
 
-// EEPROM
-//#define EEPROM_ENABLED
+//#define LIGHT_VERSION
+#define EEPROM_ENABLED
 
 //#define FLASH_END 0x0801FFFU
 #define EEPROM_LENGTH E2END
@@ -125,9 +125,13 @@ public:
 
     uint8_t writeEEPROM(uint16_t address, uint8_t value);
     void data2EEPROM();
-    void storeDataDynCRC();
+    uint16_t DataDynCRC();
 
     // *** Vars
-    uint8_t dyn_data[DXL_DATA_SIZE];
+    // Stored DXL MEMORY
+    uint8_t DXL_data[DXL_DATA_SIZE];
+    // Flag to store into EEPROM
+    bool storeToEEPROM = false;
+
 };
 #endif

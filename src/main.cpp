@@ -1,6 +1,6 @@
 
 //#if __has_include("hal_conf_extra.h")
-#include "hal_conf_extra.h"
+//#include "hal_conf_extra.h"
 //#endif
 #include <Arduino.h>
 #include <Wire.h>
@@ -9,7 +9,11 @@
 #include <sensors/MagneticSensorI2C.h>
 #include "simplefocDxlCore.h"
 
+//SERIAL
 #define SERIAL_BAUDRATE 1000000
+//I2C
+#define I2C_SPEED 1000000
+
 
 #define DRV_IN1 PA6
 #define DRV_IN2 PA7
@@ -37,6 +41,7 @@ HardwareSerial Serial1(PA9);
 #else
 HardwareSerial Serial1(PA10, PA9);
 #endif
+
 // DYNAMIXEL DEVICE
 // WRAPPER
 simplefocDxlCore mydxl(&motor);
@@ -65,7 +70,7 @@ void setup()
   //  Wire.setSDA(PB7);
   //  initialise magnetic sensor hardware
   sensor.init(&Wire2);
-  Wire2.setClock(400000);
+  Wire2.setClock(I2C_SPEED);
   // link the motor to the sensor
   motor.linkSensor(&sensor);
 
@@ -119,8 +124,8 @@ void setup()
 #endif
   Serial1.begin(SERIAL_BAUDRATE);
   mydxl.attachSerial(Serial1);
-  Serial1.print("CPU:");
-  Serial1.println(F_CPU);
+ // Serial1.print("CPU:");
+ // Serial1.println(F_CPU);
   // comment out if not needed
   // motor.useMonitoring(Serial1);
 
