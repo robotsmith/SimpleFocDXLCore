@@ -71,6 +71,7 @@ void setup()
   Wire2.setClock(I2C_SPEED);
   // link the motor to the sensor
   motor.linkSensor(&sensor);
+  // OK
 
   // driver config
   // power supply voltage [V]
