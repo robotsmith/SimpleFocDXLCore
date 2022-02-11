@@ -4,6 +4,7 @@ simplefocDxlCore::simplefocDxlCore(BLDCMotor *_motor)
 {
     // Associate simplefoc motor
     motor = _motor;
+
     hardware_error = 0;
     fault_mode = false;
 }
@@ -47,6 +48,7 @@ void simplefocDxlCore::setFaultMode(bool mode)
         motor->disable();
         update_parameters();
     }
+
 }
 void simplefocDxlCore::factoryResetMem()
 {
@@ -89,6 +91,7 @@ void simplefocDxlCore::init()
         dxlmem.store(ADD_TORQUE_ENABLE, (uint8_t)1);
     }
 
+
     // Refresh parameter from simplefoc
     refreshRAMData();
     update_parameters();
@@ -102,7 +105,9 @@ void simplefocDxlCore::loadDefaultMem()
     // MODEL NUMBER
     dxlmem.store(ADD_MODEL_NUMBER, (uint16_t)0x0406); // XM430
     // MODEL FIRMWARE
+
     dxlmem.store(ADD_VERSION_OF_FIRMWARE, (uint8_t)0x2D);
+
     // ID
     dxlmem.store(ADD_ID, (uint8_t)0x01);
     // BAUDRATE
@@ -156,12 +161,14 @@ void simplefocDxlCore::update()
         }
     }
 
+
     // Check incoming serial
     dxlcom.checkSerial();
 
     // Check if a incoming packet is available
     if (dxlcom.packetAvailable())
     {
+
         // Is this packet for this device?
         if (dxlcom.inPacket.getId() == dxlmem.getValueFromDxlData(ADD_ID) || dxlcom.inPacket.getId() == 0xFE)
         {
@@ -203,6 +210,7 @@ void simplefocDxlCore::update()
             dxlcom.closeStatusPacket();
 
             dxlcom.sendOutPacket();
+
         }
         // Clear packet
         dxlcom.inPacket.clear();
@@ -212,8 +220,10 @@ void simplefocDxlCore::update()
     if (rcount == 0)
     {
         refreshPresentData();
+
         uint16_t rec_dxl = micros() - temps_DXLC;
         uint32_t rec_foc = micros() - time_record - rec_dxl;
+
         dxlmem.store(ADD_GOAL_VELOCITY, rec_foc);
         dxlmem.store(ADD_GOAL_CURRENT, rec_dxl);
     }
@@ -257,6 +267,7 @@ void simplefocDxlCore::executePacketCommand()
         // |L=8:HEADERS,ID,... (PARAM_GAP)|L=2:ADD|L=2:size to read|L=2:CRC|
         uint16_t size = dxlcom.inPacket.currentSize - PARAM_GAP - 3;
         dxlmem.store(wAddress, (size), (dxlcom.inPacket.buffer + PARAM_GAP + 2));
+
     }
     else if (dxlcom.inPacket.instruction() == INST_REBOOT)
     {
@@ -270,6 +281,7 @@ void simplefocDxlCore::executePacketCommand()
     {
         dxlcom.outPacket.protocol_error |= 0x02;
     }
+
 }
 void simplefocDxlCore::refreshRAMData()
 {
@@ -310,10 +322,12 @@ void simplefocDxlCore::refreshPresentData()
     uint16_t involtage = (double)(analogRead(_in_voltage) * 0.18);
     dxlmem.store(ADD_PRESENT_INPUT_VOLTAGE, (uint16_t)(involtage));
 
+
     // Involtage error handling
     if ((involtage < dxlmem.getValueFromDxlData(ADD_MIN_VOLTAGE_LIMIT, 2)) ||
         (involtage > dxlmem.getValueFromDxlData(ADD_MAX_VOLTAGE_LIMIT, 2)))
         hardware_error |= 0x01;
+
 
     // ADD_PRESENT_TEMPERATURE MCP9700T-E/TT
     float voltage = float(analogRead(_temp_pin)) * 3300.0 / 1024.0;
@@ -339,6 +353,7 @@ void simplefocDxlCore::refreshPresentData()
 
     if ((dxlmem.getValueFromDxlData(ADD_HARDWARE_ERROR_STATUS) > 0) && !fault_mode)
         setFaultMode(true);
+
 }
 
 void simplefocDxlCore::update_parameters()
@@ -358,7 +373,6 @@ void simplefocDxlCore::update_parameters()
     // ADD_SHUTDOWN
 
     //***RAM
-
     if (!fault_mode)
     {
         // ADD_TORQUE_ENABLE
@@ -384,6 +398,7 @@ void simplefocDxlCore::update_parameters()
         if (dxlmem.getValueFromDxlData(ADD_LED, 1))
             dxlmem.store(ADD_LED, (uint8_t)0);
     }
+
     // ADD_HARDWARE_ERROR_STATUS
     // ADD_VELOCITY_I_GAIN
     motor->PID_velocity.I = (double)dxlmem.getValueFromDxlData(ADD_VELOCITY_I_GAIN, 2) / 128;
