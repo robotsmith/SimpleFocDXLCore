@@ -4,6 +4,49 @@ simplefocDxlCore::simplefocDxlCore(BLDCMotor *_motor)
 {
     // Associate simplefoc motor
     motor = _motor;
+    hardware_error = 0;
+    fault_mode = false;
+}
+void simplefocDxlCore::attachHarware(byte nrst_drv_pin,
+                                     byte nslp_drv_pin,
+                                     byte fault_drv_pin,
+                                     byte led_pin,
+                                     byte temperature_pin,
+                                     byte input_voltage_pin)
+{
+    _nrst_drv_pin = nrst_drv_pin;
+    _nslp_drv_pin = nslp_drv_pin;
+    _fault_drv_pin = fault_drv_pin;
+    _led_pin = led_pin;
+    _temp_pin = temperature_pin;
+    _in_voltage = input_voltage_pin;
+
+    // Init outputs
+    pinMode(_fault_drv_pin, INPUT);
+    pinMode(_nslp_drv_pin, OUTPUT);
+    pinMode(_nrst_drv_pin, OUTPUT);
+    pinMode(_led_pin, OUTPUT);
+    pinMode(_temp_pin, INPUT);
+    pinMode(_in_voltage, INPUT);
+
+    digitalWrite(_led_pin, LOW);
+    digitalWrite(_nslp_drv_pin, HIGH);
+
+    // Reset driver sequence
+    digitalWrite(_nrst_drv_pin, LOW);
+    delay(10);
+    digitalWrite(_nrst_drv_pin, HIGH);
+}
+void simplefocDxlCore::setFaultMode(bool mode)
+{
+    fault_mode = mode;
+    if (mode)
+    {
+        fault_mode_time = millis();
+        // Stop motor
+        motor->disable();
+        // blinkStatus(10, 100);
+    }
 }
 void simplefocDxlCore::factoryResetMem()
 {
@@ -35,6 +78,15 @@ void simplefocDxlCore::init()
     // Refresh parameter from simplefoc
     refreshRAMData();
     update_parameters();
+    // blinkStatus(10, 500);
+
+    // Init motor and FOC
+    // initialise motor
+    motor->init();
+    // align encoder and start FOC
+    motor->initFOC();
+
+    motor->disable();
 }
 void simplefocDxlCore::loadDefaultMem()
 {
@@ -88,6 +140,17 @@ void simplefocDxlCore::update()
     long temps_DXLC = 0;
     if (rcount == 0)
         temps_DXLC = micros();
+
+    if (fault_mode)
+    {
+        if ((millis() - fault_mode_time) > ERROR_BLINKING_TIMEOUT)
+        {
+            // Toggle led
+            digitalWrite(_led_pin, !digitalRead(_led_pin));
+            fault_mode_time = millis();
+        }
+    }
+
     // Check incoming serial
     dxlcom.checkSerial();
 
@@ -243,8 +306,9 @@ void simplefocDxlCore::refreshPresentData()
     dxlmem.store(ADD_PRESENT_INPUT_VOLTAGE, (uint16_t)(involtage));
 
     // Involtage error handling
-    if (involtage < dxlmem.getValueFromDxlData(ADD_MIN_VOLTAGE_LIMIT, 2) || involtage > dxlmem.getValueFromDxlData(ADD_MIN_VOLTAGE_LIMIT, 2))
-        dxlcom.outPacket.protocol_error |= 0x01;
+    if ((involtage < dxlmem.getValueFromDxlData(ADD_MIN_VOLTAGE_LIMIT, 2)) ||
+        (involtage > dxlmem.getValueFromDxlData(ADD_MAX_VOLTAGE_LIMIT, 2)))
+        hardware_error |= 0x01;
 
     // ADD_PRESENT_TEMPERATURE MCP9700T-E/TT
     float voltage = float(analogRead(_temp_pin)) * 3300.0 / 1024.0;
@@ -254,10 +318,16 @@ void simplefocDxlCore::refreshPresentData()
 
     // Overheating error handling
     if (temperature > dxlmem.getValueFromDxlData(ADD_TEMPERATURE_LIMIT))
-        dxlcom.outPacket.protocol_error |= 0x04;
-    
+        hardware_error |= 0x04;
 
+    if (hardware_error != dxlmem.getValueFromDxlData(ADD_HARDWARE_ERROR_STATUS))
+    {
+        dxlmem.store(ADD_HARDWARE_ERROR_STATUS, (uint8_t)hardware_error);
+    }
 #endif
+
+    if ((dxlmem.getValueFromDxlData(ADD_HARDWARE_ERROR_STATUS) > 0) && !fault_mode)
+        setFaultMode(true);
 }
 
 void simplefocDxlCore::update_parameters()
@@ -277,21 +347,32 @@ void simplefocDxlCore::update_parameters()
     // ADD_SHUTDOWN
 
     //***RAM
-    // ADD_TORQUE_ENABLE
-    if (dxlmem.getValueFromDxlData(ADD_TORQUE_ENABLE, 1))
-    {
-        motor->enable();
-    }
-    else
-        motor->disable();
 
-    // ADD_LED
-    if (dxlmem.getValueFromDxlData(ADD_LED, 1) == 1)
+    if (!fault_mode)
     {
-        digitalWrite(_led_pin, HIGH);
+        // ADD_TORQUE_ENABLE
+        if (dxlmem.getValueFromDxlData(ADD_TORQUE_ENABLE, 1))
+        {
+            motor->enable();
+        }
+        else
+            motor->disable();
+
+        // ADD_LED
+        if (dxlmem.getValueFromDxlData(ADD_LED, 1) == 1)
+        {
+            digitalWrite(_led_pin, HIGH);
+        }
+        else
+            digitalWrite(_led_pin, LOW);
     }
-    else
-        digitalWrite(_led_pin, LOW);
+    else // IN FAULT MODE
+    {
+        if (dxlmem.getValueFromDxlData(ADD_TORQUE_ENABLE, 1))
+            dxlmem.store(ADD_TORQUE_ENABLE, (uint8_t)0);
+        if (dxlmem.getValueFromDxlData(ADD_LED, 1))
+            dxlmem.store(ADD_LED, (uint8_t)0);
+    }
     // ADD_HARDWARE_ERROR_STATUS
     // ADD_VELOCITY_I_GAIN
     motor->PID_velocity.I = (double)dxlmem.getValueFromDxlData(ADD_VELOCITY_I_GAIN, 2) / 128;
