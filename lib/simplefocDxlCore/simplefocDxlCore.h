@@ -5,7 +5,11 @@
 #include <BLDCMotor.h>
 #include <dxlCom.h>
 #include <dxlMemory.h>
+#define EEPROM_ENABLED
 
+
+// LED BLINKING TIMEOUT IN FAULT MODE
+#define ERROR_BLINKING_TIMEOUT 200
 
 class simplefocDxlCore
 {
@@ -31,18 +35,13 @@ public:
     @param2 TEMPERATURE_PIN
     @param3 INPUT_VOLTAGE_PIN
     */
-    void attachHarware(byte led_pin, byte temperature_pin, byte input_voltage_pin)
-    {
-        _led_pin = led_pin;
-        _temp_pin = temperature_pin;
-        _in_voltage = input_voltage_pin;
 
-        // Init outputs
-        pinMode(_led_pin, OUTPUT);
-        digitalWrite(_led_pin, LOW);
-        pinMode(_temp_pin, INPUT);
-        pinMode(_in_voltage, INPUT);
-    }
+    void attachHarware(byte nrst_drv_pin,
+                       byte nslp_drv_pin,
+                       byte fault_drv_pin,
+                       byte led_pin,
+                       byte temperature_pin,
+                       byte input_voltage_pin);
 
     // Factory reset memory
     void factoryResetMem();
@@ -55,6 +54,11 @@ public:
 
     // Blink status led
     void blinkStatus(uint8_t nb, uint16_t delay_);
+
+    // SET FAULT MODE
+    // @param mode : 1=fault 0=normal
+    void setFaultMode(bool mode);
+
     // *** Variables
 private:
     // *** Functions
@@ -81,6 +85,7 @@ private:
     bool pending_parameter = false;
 
     // *** PIN Storage
+
     // LED PIN
     byte _led_pin;
     // TEMPERATURE PIN
@@ -88,11 +93,29 @@ private:
     // INPUT VOLTAGE
     byte _in_voltage;
 
-    //Time record
-    long time_record;
 
-    //Refresh Counter
-    uint8_t rcount=0;
+    // DRIVER SPECIAL PINS
+
+    // NOT RESET PIN
+    byte _nrst_drv_pin;
+    // NOT SLEEP PIN
+    byte _nslp_drv_pin;
+    // FAULT PIN
+    byte _fault_drv_pin;
+    // Time record
+    long time_record;
+    // Fault_mode_time
+    long fault_mode_time;
+
+    // Refresh Counter
+    uint8_t rcount = 0;
+
+    // Hardware Error flag
+    byte hardware_error;
+
+    // Fault Mode
+    bool fault_mode = false;
+
 };
 
 #endif

@@ -9,9 +9,10 @@
 #include <sensors/MagneticSensorI2C.h>
 #include "simplefocDxlCore.h"
 
-//SERIAL
+
+// SERIAL
 #define SERIAL_BAUDRATE 1000000
-//I2C
+// I2C
 #define I2C_SPEED 1000000
 
 
@@ -20,7 +21,7 @@
 #define DRV_IN3 PB0
 #define DRV_EN PB1
 #define DRV_NSLP PB2
-#define DRV_FLT PB14
+#define DRV_FLT PB15
 #define DRV_NRST PB13
 #define STS_LED PB14
 #define INVOLTAGE_PIN PA0
@@ -53,17 +54,18 @@ TwoWire Wire2(PB11, PB10);
 void setup()
 {
 
-  pinMode(DRV_FLT, INPUT);
-  pinMode(DRV_NSLP, OUTPUT);
-  pinMode(DRV_NRST, OUTPUT);
-  pinMode(STS_LED, OUTPUT);
-
-  digitalWrite(DRV_NRST, HIGH);
-  digitalWrite(DRV_NSLP, HIGH);
-  digitalWrite(STS_LED, LOW);
-
+ /* pinMode(STS_LED, OUTPUT);
+  for (int i = 0; i < 10; i++)
+  {
+    digitalWrite(STS_LED, HIGH);
+    delay(100);
+    digitalWrite(STS_LED, LOW);
+    delay(100);
+  }
+*/
   // Attach Hardware
-  mydxl.attachHarware(STS_LED, TEMPERATURE_PIN, INVOLTAGE_PIN);
+  mydxl.attachHarware(DRV_NRST, DRV_NSLP, DRV_FLT, STS_LED, TEMPERATURE_PIN, INVOLTAGE_PIN);
+
   // Wire.setSDA(PB11);
   // Wire.setSCL(PB10);
   //  Wire.setSCL(PB6);
@@ -73,6 +75,7 @@ void setup()
   Wire2.setClock(I2C_SPEED);
   // link the motor to the sensor
   motor.linkSensor(&sensor);
+  // OK
 
   // driver config
   // power supply voltage [V]
@@ -124,17 +127,12 @@ void setup()
 #endif
   Serial1.begin(SERIAL_BAUDRATE);
   mydxl.attachSerial(Serial1);
- // Serial1.print("CPU:");
- // Serial1.println(F_CPU);
+
   // comment out if not needed
   // motor.useMonitoring(Serial1);
 
-  // initialise motor
-  motor.init();
-  // align encoder and start FOC
-  motor.initFOC();
 
-  motor.disable();
+
   // set the inital target value
   // motor.target = 2;
 
@@ -148,14 +146,15 @@ void setup()
 
 void loop()
 {
-  //volatile long temps_FOC = micros();
+
+  // volatile long temps_FOC = micros();
   motor.loopFOC();
   motor.move();
-  //temps_FOC = micros() - temps_FOC;
+  // temps_FOC = micros() - temps_FOC;
 
   // Serial1.println(tmp);
-  //volatile long temps_DXL = micros();
+  // volatile long temps_DXL = micros();
   mydxl.update();
-  //temps_DXL = micros() - temps_DXL;
+  // temps_DXL = micros() - temps_DXL;
 
 }
