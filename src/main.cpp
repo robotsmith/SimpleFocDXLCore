@@ -19,7 +19,7 @@
 #define DRV_IN3 PB0
 #define DRV_EN PB1
 #define DRV_NSLP PB2
-#define DRV_FLT PB14
+#define DRV_FLT PB15
 #define DRV_NRST PB13
 #define STS_LED PB14
 #define INVOLTAGE_PIN PA0

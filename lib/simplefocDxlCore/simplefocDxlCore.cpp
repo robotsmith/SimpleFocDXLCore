@@ -45,7 +45,7 @@ void simplefocDxlCore::setFaultMode(bool mode)
         fault_mode_time = millis();
         // Stop motor
         motor->disable();
-        // blinkStatus(10, 100);
+        update_parameters();
     }
 }
 void simplefocDxlCore::factoryResetMem()
@@ -75,9 +75,7 @@ void simplefocDxlCore::init()
     else
         blinkStatus(2, 500);
 #endif
-    // Refresh parameter from simplefoc
-    refreshRAMData();
-    update_parameters();
+
     // blinkStatus(10, 500);
 
     // Init motor and FOC
@@ -86,7 +84,14 @@ void simplefocDxlCore::init()
     // align encoder and start FOC
     motor->initFOC();
 
-    motor->disable();
+    if (dxlmem.getValueFromDxlData(ADD_STARTUP_CONFIGURATION, 1) & 0x01)
+    {
+        dxlmem.store(ADD_TORQUE_ENABLE, (uint8_t)1);
+    }
+
+    // Refresh parameter from simplefoc
+    refreshRAMData();
+    update_parameters();
 }
 void simplefocDxlCore::loadDefaultMem()
 {
@@ -97,7 +102,7 @@ void simplefocDxlCore::loadDefaultMem()
     // MODEL NUMBER
     dxlmem.store(ADD_MODEL_NUMBER, (uint16_t)0x0406); // XM430
     // MODEL FIRMWARE
-    dxlmem.store(ADD_VERSION_OF_FIRMWARE, (uint8_t)0x26);
+    dxlmem.store(ADD_VERSION_OF_FIRMWARE, (uint8_t)0x2D);
     // ID
     dxlmem.store(ADD_ID, (uint8_t)0x01);
     // BAUDRATE
@@ -320,10 +325,16 @@ void simplefocDxlCore::refreshPresentData()
     if (temperature > dxlmem.getValueFromDxlData(ADD_TEMPERATURE_LIMIT))
         hardware_error |= 0x04;
 
+    // Hardware error on the driver
+    if (!digitalRead(_fault_drv_pin))
+        hardware_error |= 0x10;
+
+    // Collect error and store it
     if (hardware_error != dxlmem.getValueFromDxlData(ADD_HARDWARE_ERROR_STATUS))
     {
         dxlmem.store(ADD_HARDWARE_ERROR_STATUS, (uint8_t)hardware_error);
     }
+
 #endif
 
     if ((dxlmem.getValueFromDxlData(ADD_HARDWARE_ERROR_STATUS) > 0) && !fault_mode)
