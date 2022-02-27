@@ -105,7 +105,9 @@ void simplefocDxlCore::loadDefaultMem()
     // MODEL NUMBER
     dxlmem.store(ADD_MODEL_NUMBER, (uint16_t)0x0406); // Default model : XM430
     // MODEL FIRMWARE
+
     dxlmem.store(ADD_VERSION_OF_FIRMWARE, (uint8_t)0x2D); // Default FW = V45
+
     // ID
     dxlmem.store(ADD_ID, (uint8_t)0x01); // Default ID = 1
     // BAUDRATE
@@ -149,7 +151,9 @@ void simplefocDxlCore::update()
     long temps_DXLC = 0;
     if (rcount == 0)
         temps_DXLC = micros();
+
 #endif
+
     if (fault_mode)
     {
         if ((millis() - fault_mode_time) > ERROR_BLINKING_TIMEOUT)
@@ -220,7 +224,9 @@ void simplefocDxlCore::update()
     if (rcount == 0)
     {
         refreshPresentData();
+
 #ifdef DEBUG_RECORD_TIME
+
         uint16_t rec_dxl = micros() - temps_DXLC;
         uint32_t rec_foc = micros() - time_record - rec_dxl;
 

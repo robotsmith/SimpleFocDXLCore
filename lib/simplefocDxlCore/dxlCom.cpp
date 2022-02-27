@@ -34,8 +34,13 @@ void dxlCom::checkSerial()
 }
 void dxlCom::sendOutPacket()
 {
+  // while (!outPacket.isEmpty())
+  dxlserial->write(outPacket.buffer, outPacket.currentSize);
+  // dxlserial->print((char)outPacket.pop_front());
+
 
   dxlserial->write(outPacket.buffer, outPacket.currentSize);
+
 
 }
 /* function setId()

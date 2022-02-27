@@ -9,7 +9,9 @@
 // SERIAL
 #define SERIAL_BAUDRATE 1000000
 // I2C
+
 #define I2C_SPEED 400000
+
 
 
 #define DRV_IN1 PA6
@@ -53,12 +55,12 @@ void setup()
   // Attach Hardware
   mydxl.attachHarware(DRV_NRST, DRV_NSLP, DRV_FLT, STS_LED, TEMPERATURE_PIN, INVOLTAGE_PIN);
 
-
   //  initialise magnetic sensor hardware
   sensor.init(&Wire2);
   Wire2.setClock(I2C_SPEED);
   // link the motor to the sensor
   motor.linkSensor(&sensor);
+  // OK
 
   // driver config
   // power supply voltage [V]
@@ -111,6 +113,7 @@ void setup()
   Serial1.begin(SERIAL_BAUDRATE);
   mydxl.attachSerial(Serial1);
 
+
   // INIT DXL DEVICE
   mydxl.init();
   _delay(200);
@@ -118,6 +121,7 @@ void setup()
 
 void loop()
 {
+
 
 
   motor.loopFOC();
