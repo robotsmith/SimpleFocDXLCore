@@ -5,10 +5,12 @@
 #include <sensors/MagneticSensorI2C.h>
 #include "simplefocDxlCore.h"
 
+
 // SERIAL
 #define SERIAL_BAUDRATE 1000000
 // I2C
 #define I2C_SPEED 400000
+
 
 #define DRV_IN1 PA6
 #define DRV_IN2 PA7
@@ -47,8 +49,10 @@ TwoWire Wire2(PB11, PB10);
 void setup()
 {
 
+
   // Attach Hardware
   mydxl.attachHarware(DRV_NRST, DRV_NSLP, DRV_FLT, STS_LED, TEMPERATURE_PIN, INVOLTAGE_PIN);
+
 
   //  initialise magnetic sensor hardware
   sensor.init(&Wire2);
@@ -115,10 +119,11 @@ void setup()
 void loop()
 {
 
-  // Update FOC
+
   motor.loopFOC();
   motor.move();
 
   // Update DXL Device
   mydxl.update();
+
 }

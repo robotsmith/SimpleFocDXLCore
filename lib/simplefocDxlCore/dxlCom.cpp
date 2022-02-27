@@ -58,6 +58,7 @@ dxlPacket::dxlPacket()
 void dxlPacket::close()
 {
 
+
   // Instruction
   buffer[7] = 0x55;
 
@@ -68,6 +69,7 @@ void dxlPacket::close()
   uint16_t packetSize = currentSize - 5; // 4bytes headers + 1 ID + 2 length + 1 Error - 2 CRC + 1 because of size+1
   buffer[5] = packetSize & 0xFF;         // Length L
   buffer[6] = packetSize >> 8;           // Length H
+
   // CRC
   unsigned short crc = crc_conversion(0, buffer, currentSize);
   buffer[currentSize] = crc & 0xFF;
@@ -100,9 +102,9 @@ void dxlPacket::clear()
   }
   else
     currentSize = 0;
-
   // Clear error
   protocol_error = 0x00;
+
 }
 bool dxlPacket::pushback(char element)
 {
@@ -130,6 +132,7 @@ char dxlPacket::pop_front()
     return 0xFF;
 
   return buffer[idx - 1];
+
 }
 /* Check if the packet is empty or not
 @return true if the packet is empty
@@ -187,6 +190,7 @@ uint8_t dxlPacket::storeByte(byte b)
           // Packet is complete and crc is OK
           _complete = true;
           return 0;
+
         }
         else
         {

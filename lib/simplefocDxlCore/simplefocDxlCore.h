@@ -10,6 +10,7 @@
 #define DEBUG_RECORD_TIME
 // LED BLINKING TIMEOUT IN FAULT MODE
 #define ERROR_BLINKING_TIMEOUT 200
+
 class simplefocDxlCore
 {
 public:
@@ -34,12 +35,14 @@ public:
     @param2 TEMPERATURE_PIN
     @param3 INPUT_VOLTAGE_PIN
     */
+
     void attachHarware(byte nrst_drv_pin,
                        byte nslp_drv_pin,
                        byte fault_drv_pin,
                        byte led_pin,
                        byte temperature_pin,
                        byte input_voltage_pin);
+
     // Factory reset memory
     void factoryResetMem();
 
@@ -55,6 +58,7 @@ public:
     // SET FAULT MODE
     // @param mode : 1=fault 0=normal
     void setFaultMode(bool mode);
+
     // *** Variables
 private:
     // *** Functions
@@ -89,6 +93,7 @@ private:
     // INPUT VOLTAGE
     byte _in_voltage;
 
+
     // DRIVER SPECIAL PINS
 
     // NOT RESET PIN
@@ -112,6 +117,7 @@ private:
 
     // Fault Mode
     bool fault_mode = false;
+
 };
 
 #endif
