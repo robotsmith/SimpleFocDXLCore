@@ -7,6 +7,11 @@
 #include <dxlMemory.h>
 #define EEPROM_ENABLED
 
+// Add time record of functionnal loops. Optionnal for debug
+#define DEBUG_RECORD_TIME
+// LED BLINKING TIMEOUT IN FAULT MODE
+#define ERROR_BLINKING_TIMEOUT 200
+
 
 // LED BLINKING TIMEOUT IN FAULT MODE
 #define ERROR_BLINKING_TIMEOUT 200
@@ -102,8 +107,12 @@ private:
     byte _nslp_drv_pin;
     // FAULT PIN
     byte _fault_drv_pin;
+
+#ifdef DEBUG_RECORD_TIME
     // Time record
     long time_record;
+#endif
+
     // Fault_mode_time
     long fault_mode_time;
 
