@@ -100,13 +100,13 @@ void simplefocDxlCore::loadDefaultMem()
     dxlmem.clear();
 
     // MODEL NUMBER
-    dxlmem.store(ADD_MODEL_NUMBER, (uint16_t)0x0406); // XM430
+    dxlmem.store(ADD_MODEL_NUMBER, (uint16_t)0x0406); // Default model : XM430
     // MODEL FIRMWARE
-    dxlmem.store(ADD_VERSION_OF_FIRMWARE, (uint8_t)0x2D);
+    dxlmem.store(ADD_VERSION_OF_FIRMWARE, (uint8_t)0x2D); // Default FW = V45
     // ID
-    dxlmem.store(ADD_ID, (uint8_t)0x01);
+    dxlmem.store(ADD_ID, (uint8_t)0x01); // Default ID = 1
     // BAUDRATE
-    dxlmem.store(ADD_BAUDRATE, (uint8_t)0x02); // 115200
+    dxlmem.store(ADD_BAUDRATE, (uint8_t)0x03); // 1M
     // Drive mode
     dxlmem.store(ADD_DRIVE_MODE, (uint8_t)0x08); // TORQUE ON GOAL UPDATE
     // control mode
@@ -115,9 +115,9 @@ void simplefocDxlCore::loadDefaultMem()
     dxlmem.store(ADD_PROTOCOL_VERSION, (uint8_t)0x02); // PROTOCOL 2
 
     // MAX temperature
-    dxlmem.store(ADD_TEMPERATURE_LIMIT, (uint8_t)0x50);
+    dxlmem.store(ADD_TEMPERATURE_LIMIT, (uint8_t)0x50); // 80°C
     // Max voltage
-    dxlmem.store(ADD_MAX_VOLTAGE_LIMIT, (uint16_t)0x0082); // 13V
+    dxlmem.store(ADD_MAX_VOLTAGE_LIMIT, (uint16_t)0x00C8); // 20V
     // Min voltage
     dxlmem.store(ADD_MIN_VOLTAGE_LIMIT, (uint16_t)0x0050); // 8V
 
@@ -131,9 +131,9 @@ void simplefocDxlCore::loadDefaultMem()
     dxlmem.store(ADD_VELOCITY_LIMIT, (uint32_t)(1000 / 0.02398));
     // POSITION LIMIT
     dxlmem.store(ADD_MAX_POSITION_LIMIT, (uint16_t)0xFFFFF);
-    dxlmem.store(ADD_MIN_POSITION_LIMIT, (uint16_t)0x0);
-    // TORQUE
-    dxlmem.store(ADD_TORQUE_ENABLE, (uint8_t)0x00); // 58.4 rev/min
+    // dxlmem.store(ADD_MIN_POSITION_LIMIT, (uint16_t)0x0);
+    //  TORQUE
+    // dxlmem.store(ADD_TORQUE_ENABLE, (uint8_t)0x00); // Default Torque is 0
 }
 
 void simplefocDxlCore::attachSerial(HardwareSerial &serial)
@@ -142,10 +142,11 @@ void simplefocDxlCore::attachSerial(HardwareSerial &serial)
 }
 void simplefocDxlCore::update()
 {
+#ifdef DEBUG_RECORD_TIME
     long temps_DXLC = 0;
     if (rcount == 0)
         temps_DXLC = micros();
-
+#endif
     if (fault_mode)
     {
         if ((millis() - fault_mode_time) > ERROR_BLINKING_TIMEOUT)
@@ -163,7 +164,8 @@ void simplefocDxlCore::update()
     if (dxlcom.packetAvailable())
     {
         // Is this packet for this device?
-        if (dxlcom.inPacket.getId() == dxlmem.getValueFromDxlData(ADD_ID) || dxlcom.inPacket.getId() == 0xFE)
+        if (dxlcom.inPacket.getId() == dxlmem.getValueFromDxlData(ADD_ID) ||
+            dxlcom.inPacket.getId() == 0xFE)
         {
 
             // InPacket CRC OK ?
@@ -212,16 +214,20 @@ void simplefocDxlCore::update()
     if (rcount == 0)
     {
         refreshPresentData();
+#ifdef DEBUG_RECORD_TIME
         uint16_t rec_dxl = micros() - temps_DXLC;
         uint32_t rec_foc = micros() - time_record - rec_dxl;
         dxlmem.store(ADD_GOAL_VELOCITY, rec_foc);
         dxlmem.store(ADD_GOAL_CURRENT, rec_dxl);
+#endif
     }
 
     rcount++;
     if (rcount >= 200)
     {
+#ifdef DEBUG_RECORD_TIME
         time_record = micros();
+#endif
         rcount = 0;
     }
 }

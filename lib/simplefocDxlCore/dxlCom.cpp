@@ -19,18 +19,7 @@ bool dxlCom::packetAvailable()
   return inPacket.isComplete();
 }
 
-/*
-bool dxlCom::parameter_available()
-{
-  if (newparameter)
-  {
-    newparameter = false;
-    return true;
-  }
 
-  return false;
-}
-*/
 void dxlCom::checkSerial()
 {
 #ifdef HALF_DUPLEX_MODE
@@ -46,9 +35,8 @@ void dxlCom::checkSerial()
 void dxlCom::sendOutPacket()
 {
 
-  // while (!outPacket.isEmpty())
   dxlserial->write(outPacket.buffer, outPacket.currentSize);
-  // dxlserial->print((char)outPacket.pop_front());
+
 }
 /* function setId()
       @param unsigned int _id : Dynamixel device indentifier (id)

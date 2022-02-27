@@ -110,22 +110,72 @@ public:
     // Clear Memory
     void clear();
 
+    /* @brief get value from DXL device memory
+    @param Dxl device memory address
+    return value @ address
+    */
     uint8_t getValueFromDxlData(uint16_t address);
+    /* @brief get value from DXL device memory
+    @param1 Dxl device memory address
+    @param2 data length (maximum 4 Bytes)
+    return value @ address
+    */
     uint32_t getValueFromDxlData(uint16_t address, uint8_t len);
-    void store(uint16_t address, uint8_t value);
-    void store(uint16_t address, int value);
-    void store(uint16_t address, uint16_t value);
-    void store(uint16_t address, uint32_t value);
-    // memory write with data segment
-    void store(uint16_t address, uint16_t wSize, uint8_t *value);
-    // READ Data from data_dyn
+    /* @brief read device memory and copy to table
+    @param1 Dxl device memory address
+    @param2 Size of reading
+    @param3 Output data table pointer
+    @param4 Actual size of the table pointer
+    */
     void memRead(uint16_t address, uint16_t readSize, uint8_t *outData, uint16_t *outDataSize);
+    /* @brief read device memory and copy to table
+    @param1 Dxl device memory address
+    @param2 pointer of size of reading
+    @param3 Output data table pointer
+    @param4 Actual size of the table pointer
+    */
     void memRead(uint16_t address, uint16_t *readSize, uint8_t *outData, uint16_t *outDataSize);
+    /* @brief Store value at address
+    @param1 memory address
+    @param2 value
+    */
+    void store(uint16_t address, uint8_t value);
+    /* @brief Store value at address [int8_t]
+    @param1 memory address
+    @param2 value
+    */
+    void store(uint16_t address, int value);
+    /* @brief Store value at address [int]
+    @param1 memory address
+    @param2 value
+    */
+    void store(uint16_t address, uint16_t value);
+    /* @brief Store value at address [int16_t]
+    @param1 memory address
+    @param2 value
+    */
+    void store(uint16_t address, uint32_t value);
+    /* @brief Store value at address [data segment]
+    @param1 memory address
+    @param2 size of reading
+    @param3 output table pointer
+    */
+    void store(uint16_t address, uint16_t wSize, uint8_t *value);
 
     // EEPROM MANAGEMENT
 
+    /* @brief write value into EEPROM
+    @param1 EEPROM memory address
+    @param2 value
+    @return error
+    */
     uint8_t writeEEPROM(uint16_t address, uint8_t value);
+    /* @brief Copy DXL data into EEPROM
+    */
     void data2EEPROM();
+    /* @brief get DXL data CRC
+    @return crc
+    */
     uint16_t DataDynCRC();
 
     // *** Vars
@@ -133,6 +183,5 @@ public:
     uint8_t DXL_data[DXL_DATA_SIZE];
     // Flag to store into EEPROM
     bool storeToEEPROM = false;
-
 };
 #endif

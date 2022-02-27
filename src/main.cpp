@@ -1,7 +1,3 @@
-
-//#if __has_include("hal_conf_extra.h")
-//#include "hal_conf_extra.h"
-//#endif
 #include <Arduino.h>
 #include <Wire.h>
 #include <BLDCMotor.h>
@@ -12,7 +8,7 @@
 // SERIAL
 #define SERIAL_BAUDRATE 1000000
 // I2C
-#define I2C_SPEED 1000000
+#define I2C_SPEED 400000
 
 #define DRV_IN1 PA6
 #define DRV_IN2 PA7
@@ -42,7 +38,6 @@ HardwareSerial Serial1(PA10, PA9);
 #endif
 
 // DYNAMIXEL DEVICE
-// WRAPPER
 simplefocDxlCore mydxl(&motor);
 
 // I2C
@@ -51,27 +46,15 @@ TwoWire Wire2(PB11, PB10);
 // SETUP
 void setup()
 {
- /* pinMode(STS_LED, OUTPUT);
-  for (int i = 0; i < 10; i++)
-  {
-    digitalWrite(STS_LED, HIGH);
-    delay(100);
-    digitalWrite(STS_LED, LOW);
-    delay(100);
-  }
-*/
+
   // Attach Hardware
   mydxl.attachHarware(DRV_NRST, DRV_NSLP, DRV_FLT, STS_LED, TEMPERATURE_PIN, INVOLTAGE_PIN);
-  // Wire.setSDA(PB11);
-  // Wire.setSCL(PB10);
-  //  Wire.setSCL(PB6);
-  //  Wire.setSDA(PB7);
+
   //  initialise magnetic sensor hardware
   sensor.init(&Wire2);
   Wire2.setClock(I2C_SPEED);
   // link the motor to the sensor
   motor.linkSensor(&sensor);
-  // OK
 
   // driver config
   // power supply voltage [V]
@@ -86,7 +69,7 @@ void setup()
   // motor.motion_downsample = 0.0;
 
   // velocity loop PID
-  motor.PID_velocity.P = 0.1;
+  motor.PID_velocity.P = 0.2;
   motor.PID_velocity.I = 1.0;
   motor.PID_velocity.D = 0.0;
   motor.PID_velocity.output_ramp = 0.0;
@@ -96,7 +79,7 @@ void setup()
   motor.LPF_velocity.Tf = 0.02;
   // angle loop PID
   motor.P_angle.P = 50.0;
-  motor.P_angle.I = 1000.0;
+  motor.P_angle.I = 500.0;
   motor.P_angle.D = 0.001;
   motor.P_angle.output_ramp = 0.0;
   motor.P_angle.limit = 50.0;
@@ -123,17 +106,6 @@ void setup()
 #endif
   Serial1.begin(SERIAL_BAUDRATE);
   mydxl.attachSerial(Serial1);
-  // Serial1.print("CPU:");
-  // Serial1.println(F_CPU);
-  // comment out if not needed
-  // motor.useMonitoring(Serial1);
-
-
-  // set the inital target value
-  // motor.target = 2;
-
-  // Run user commands to configure and the motor (find the full command list in docs.simplefoc.com)
-  // Serial1.println(F("Motor ready"));
 
   // INIT DXL DEVICE
   mydxl.init();
@@ -142,13 +114,11 @@ void setup()
 
 void loop()
 {
-  // volatile long temps_FOC = micros();
+
+  // Update FOC
   motor.loopFOC();
   motor.move();
-  // temps_FOC = micros() - temps_FOC;
 
-  // Serial1.println(tmp);
-  // volatile long temps_DXL = micros();
+  // Update DXL Device
   mydxl.update();
-  // temps_DXL = micros() - temps_DXL;
 }
