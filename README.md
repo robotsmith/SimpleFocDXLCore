@@ -25,6 +25,7 @@ I think you can add dummy pin for STS_LED and Temperature pin
 In Loop:
 
 - update :   mydxl.update();
+Note: do not hesitate to check the main.cpp file as an example.
 
 ## Functionnal Dynamixel Features
 ### COMMANDS
