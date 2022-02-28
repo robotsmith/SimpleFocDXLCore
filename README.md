@@ -1,5 +1,6 @@
 # SimpleFocDXLCore : SimpleFoc running Dynamixel Protocol
-
+## Media
+Here is a dirty video to show the devices 
 ## Purpose
 
 The goal of this library is to use SimpleFoc as a Dynamixel device. 
