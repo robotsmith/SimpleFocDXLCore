@@ -1,4 +1,12 @@
-# SimpleFoc DXL Core
+# SimpleFocDXLCore : SimpleFoc running Dynamixel Protocol
+
+## Purpose
+
+The goal of this library is to use SimpleFoc as a Dynamixel device. 
+This is a Work In Progress and quickly coded, not a final version. However I believe, it can be a good start in case you need to explore this topic.
+
+## Actual device
+Today the device is a STM32G030C8T6 but I tried to keep the code quite usable under other device. Just be carefull with the EEPROM parameter in library.
 
 ### COMMANDS
 
@@ -108,3 +116,7 @@ Name / Address
 - [ ] POSITION_TRAJECTORY 140
 - [x] PRESENT\_INPUT\_VOLTAGE 144
 - [x] PRESENT_TEMPERATURE 146
+
+## Licence
+
+SimpleFocDXLCore library is released under the GNU GPL v3, which you can find at http://www.gnu.org/licenses/gpl-3.0.en.html
