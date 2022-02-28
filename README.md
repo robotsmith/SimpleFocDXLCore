@@ -20,7 +20,7 @@ I think you can add dummy pin for STS_LED and Temperature pin
 In Loop:
 - update :   mydxl.update();
 
-
+## Functionnal Dynamixel Features
 ### COMMANDS
 
 See \[https://emanual.robotis.com/docs/en/dxl/protocol2/#instruction-packet\](Dynamixel Protocol 2.0)
