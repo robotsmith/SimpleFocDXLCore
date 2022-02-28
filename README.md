@@ -1,10 +1,15 @@
 # SimpleFocDXLCore : SimpleFoc running Dynamixel Protocol
-## Media
-Here is a dirty video to show the devices 
+
 ## Purpose
 
 The goal of this library is to use SimpleFoc as a Dynamixel device. 
 This is a Work In Progress and quickly coded, not a final version. However I believe, it can be a good start in case you need to explore this topic.
+
+<img src = "media/device.jpg" width=500>
+Here is a dirty video to show the devices:
+
+[<img src = "media/device.jpg" width=100>](https://www.youtube.com/watch?v=e_fn1X6Afq0)
+
 
 ## Actual device
 Today the device is a STM32G030C8T6 + DRV8313 but I tried to keep the code quite usable under other device. Just be carefull with the EEPROM parameter in library.
