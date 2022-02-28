@@ -6,7 +6,20 @@ The goal of this library is to use SimpleFoc as a Dynamixel device. 
 This is a Work In Progress and quickly coded, not a final version. However I believe, it can be a good start in case you need to explore this topic.
 
 ## Actual device
-Today the device is a STM32G030C8T6 but I tried to keep the code quite usable under other device. Just be carefull with the EEPROM parameter in library.
+Today the device is a STM32G030C8T6 + DRV8313 but I tried to keep the code quite usable under other device. Just be carefull with the EEPROM parameter in library.
+
+## How to use it?
+This was coded and use the platformio generics structure. So use the /lib folder and add to you main code:
+
+- include library
+In setup:
+- your device linked to simpleFoc motor: simplefocDxlCore mydxl(&motor);
+- link some extra hardware if used:   mydxl.attachHarware(DRV_NRST, DRV_NSLP, DRV_FLT, STS_LED, TEMPERATURE_PIN, INVOLTAGE_PIN);
+I think you can add dummy pin for STS_LED and Temperature pin
+- link the serial port  : mydxl.attachSerial(Serial1);
+In Loop:
+- update :   mydxl.update();
+
 
 ### COMMANDS
 
